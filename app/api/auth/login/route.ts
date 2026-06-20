@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Role } from "@prisma/client";
-import { verifyPassword, setSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   return NextResponse.redirect(new URL("/", request.url), 303);
 }
 
 export async function POST(request: NextRequest) {
+  const [{ Role }, { verifyPassword, setSession }, { prisma }] = await Promise.all([
+    import("@prisma/client"),
+    import("@/lib/auth"),
+    import("@/lib/prisma")
+  ]);
+
   const form = await request.formData();
   const email = String(form.get("email") || "").toLowerCase().trim();
   const password = String(form.get("password") || "");
