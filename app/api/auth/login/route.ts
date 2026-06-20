@@ -3,6 +3,10 @@ import { Role } from "@prisma/client";
 import { verifyPassword, setSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export async function GET(request: NextRequest) {
+  return NextResponse.redirect(new URL("/", request.url), 303);
+}
+
 export async function POST(request: NextRequest) {
   const form = await request.formData();
   const email = String(form.get("email") || "").toLowerCase().trim();
