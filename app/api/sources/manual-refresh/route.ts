@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role, SourceType } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { redirectTo } from "@/lib/redirect";
 
 export async function POST(request: NextRequest) {
   const user = await requireRole(Role.ADMIN);
@@ -32,5 +33,5 @@ export async function POST(request: NextRequest) {
     : await prisma.jobSource.create({ data: sourceData });
 
   await prisma.auditLog.create({ data: { actorId: user.id, action: "JOB_SOURCE_CONFIGURED", entity: "JobSource", entityId: source.id } });
-  return NextResponse.redirect(new URL("/settings", request.url), 303);
+  return redirectTo("/settings");
 }

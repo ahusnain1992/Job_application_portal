@@ -4,6 +4,7 @@ import { EmploymentType, WorkMode } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
+import { redirectTo } from "@/lib/redirect";
 
 const UpdateSchema = z.object({
   clientName: z.string().min(1).max(200),
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const parsed = UpdateSchema.safeParse(raw);
   if (!parsed.success) {
     const msg = parsed.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join("; ");
-    return NextResponse.redirect(new URL(`/clients/${params.id}/edit?error=${encodeURIComponent(msg)}`, request.url), 303);
+    return redirectTo(`/clients/${params.id}/edit?error=${encodeURIComponent(msg)}`);
   }
 
   const d = parsed.data;
@@ -86,5 +87,5 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
   });
 
-  return NextResponse.redirect(new URL(`/clients/${params.id}?updated=1`, request.url), 303);
+  return redirectTo(`/clients/${params.id}?updated=1`);
 }

@@ -6,6 +6,7 @@ import { duplicateSignature } from "@/lib/services/duplicates";
 import { scoreJobForClient } from "@/lib/services/matching";
 import { analyzeResumeJobFit } from "@/lib/services/resume-match";
 import { JobImportSchema } from "@/lib/validation";
+import { redirectTo } from "@/lib/redirect";
 
 function list(value: FormDataEntryValue | null) {
   return String(value || "")
@@ -28,18 +29,18 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/jobs?error=invalid-import", request.url), 303);
+    return redirectTo("/jobs?error=invalid-import");
   }
 
   const data = parsed.data;
   const clientId = data.clientId;
 
   if (!(await canAccessClient(user, clientId))) {
-    return NextResponse.redirect(new URL("/jobs?error=unauthorized", request.url), 303);
+    return redirectTo("/jobs?error=unauthorized");
   }
 
   const client = await prisma.clientProfile.findUnique({ where: { id: clientId } });
-  if (!client) return NextResponse.redirect(new URL("/jobs?error=client", request.url), 303);
+  if (!client) return redirectTo("/jobs?error=client");
 
   const source = await prisma.jobSource.upsert({
     where: { id: "manual-import-source" },
@@ -102,5 +103,5 @@ export async function POST(request: NextRequest) {
   });
 
   await prisma.auditLog.create({ data: { actorId: user.id, action: "JOB_IMPORTED", entity: "Job", entityId: job.id } });
-  return NextResponse.redirect(new URL(`/jobs/${job.id}`, request.url), 303);
+  return redirectTo(`/jobs/${job.id}`);
 }

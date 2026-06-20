@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Role } from "@prisma/client";
 import { requireRole, hashPassword } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { redirectTo } from "@/lib/redirect";
 
 const CreateUserSchema = z.object({
   name: z.string().min(1).max(100),
@@ -22,26 +23,26 @@ export async function POST(request: NextRequest) {
   if (action === "deactivate") {
     const parsed = UserActionSchema.safeParse({ userId: form.get("userId") });
     if (!parsed.success) {
-      return NextResponse.redirect(new URL("/settings?error=invalid-user", request.url), 303);
+      return redirectTo("/settings?error=invalid-user");
     }
     const { userId } = parsed.data;
     if (userId === user.id) {
-      return NextResponse.redirect(new URL("/settings?error=self-deactivate", request.url), 303);
+      return redirectTo("/settings?error=self-deactivate");
     }
     await prisma.user.updateMany({ where: { id: userId, role: Role.TEAM_MEMBER }, data: { active: false } });
     await prisma.auditLog.create({ data: { actorId: user.id, action: "USER_DEACTIVATED", entity: "User", entityId: userId } });
-    return NextResponse.redirect(new URL("/settings", request.url), 303);
+    return redirectTo("/settings");
   }
 
   if (action === "reactivate") {
     const parsed = UserActionSchema.safeParse({ userId: form.get("userId") });
     if (!parsed.success) {
-      return NextResponse.redirect(new URL("/settings?error=invalid-user", request.url), 303);
+      return redirectTo("/settings?error=invalid-user");
     }
     const { userId } = parsed.data;
     await prisma.user.updateMany({ where: { id: userId, role: Role.TEAM_MEMBER }, data: { active: true } });
     await prisma.auditLog.create({ data: { actorId: user.id, action: "USER_REACTIVATED", entity: "User", entityId: userId } });
-    return NextResponse.redirect(new URL("/settings", request.url), 303);
+    return redirectTo("/settings");
   }
 
   const parsed = CreateUserSchema.safeParse({
@@ -51,19 +52,19 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/settings?error=missing-fields", request.url), 303);
+    return redirectTo("/settings?error=missing-fields");
   }
 
   const { name, email, password } = parsed.data;
 
   const existing = await prisma.user.findFirst({ where: { email } });
   if (existing) {
-    return NextResponse.redirect(new URL("/settings?error=email-taken", request.url), 303);
+    return redirectTo("/settings?error=email-taken");
   }
 
   const newUser = await prisma.user.create({
     data: { name, email, passwordHash: await hashPassword(password), role: Role.TEAM_MEMBER }
   });
   await prisma.auditLog.create({ data: { actorId: user.id, action: "USER_CREATED", entity: "User", entityId: newUser.id } });
-  return NextResponse.redirect(new URL("/settings", request.url), 303);
+  return redirectTo("/settings");
 }

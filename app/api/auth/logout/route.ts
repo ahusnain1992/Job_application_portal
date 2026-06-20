@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clearSession } from "@/lib/auth";
+import { redirectTo } from "@/lib/redirect";
 
 export async function POST(request: NextRequest) {
   clearSession();
-  return NextResponse.redirect(new URL("/", request.url), 303);
+  return redirectTo("/");
 }

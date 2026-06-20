@@ -3,6 +3,7 @@ import { z } from "zod";
 import { JobStatus, Prisma } from "@prisma/client";
 import { requireUser, canAccessClient } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { redirectTo } from "@/lib/redirect";
 
 const Schema = z.object({
   jobId: z.string().cuid(),
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
   const parsed = Schema.safeParse(raw);
   if (!parsed.success) {
     const msg = parsed.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join("; ");
-    return NextResponse.redirect(new URL(`/jobs?error=${encodeURIComponent(msg)}`, request.url), 303);
+    return redirectTo(`/jobs?error=${encodeURIComponent(msg)}`);
   }
 
   const { jobId, clientId, status, notes, resumeId, confirmationNumber, proofUrl, reasonSkipped, coverLetterUsed } = parsed.data;
@@ -43,20 +44,20 @@ export async function POST(request: NextRequest) {
   // Authorization: team members can only touch their assigned clients
   const hasAccess = await canAccessClient(user, clientId);
   if (!hasAccess) {
-    return NextResponse.redirect(new URL("/team", request.url), 303);
+    return redirectTo("/team");
   }
 
   // Validate that the job belongs to the stated client
   const job = await prisma.job.findFirst({ where: { id: jobId, clientId } });
   if (!job) {
-    return NextResponse.redirect(new URL(`/jobs?error=invalid-job`, request.url), 303);
+    return redirectTo("/jobs?error=invalid-job");
   }
 
   // Validate that resumeId (if provided) belongs to the same client
   if (resumeId) {
     const resume = await prisma.resume.findFirst({ where: { id: resumeId, clientId } });
     if (!resume) {
-      return NextResponse.redirect(new URL(`/jobs/${jobId}?error=invalid-resume`, request.url), 303);
+      return redirectTo(`/jobs/${jobId}?error=invalid-resume`);
     }
   }
 
@@ -72,11 +73,11 @@ export async function POST(request: NextRequest) {
   const cleanCoverLetter = coverLetterUsed?.trim() || null;
 
   if (isApplied && !cleanConfirmation && !cleanProofUrl && !existingApp?.verifiedByGmail) {
-    return NextResponse.redirect(new URL(`/jobs/${jobId}?error=proof-required`, request.url), 303);
+    return redirectTo(`/jobs/${jobId}?error=proof-required`);
   }
 
   if (isSkipped && !cleanReasonSkipped) {
-    return NextResponse.redirect(new URL(`/jobs/${jobId}?error=skip-reason-required`, request.url), 303);
+    return redirectTo(`/jobs/${jobId}?error=skip-reason-required`);
   }
 
   let timeSpentMinutes: number | null = null;
@@ -176,14 +177,14 @@ export async function POST(request: NextRequest) {
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
-      return NextResponse.redirect(new URL(`/jobs/${jobId}?duplicateApplied=1`, request.url), 303);
+      return redirectTo(`/jobs/${jobId}?duplicateApplied=1`);
     }
     throw error;
   }
 
   if (duplicateApplied) {
-    return NextResponse.redirect(new URL(`/jobs/${jobId}?duplicateApplied=1`, request.url), 303);
+    return redirectTo(`/jobs/${jobId}?duplicateApplied=1`);
   }
 
-  return NextResponse.redirect(new URL(`/jobs/${jobId}`, request.url), 303);
+  return redirectTo(`/jobs/${jobId}`);
 }

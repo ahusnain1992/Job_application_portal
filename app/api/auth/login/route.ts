@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { redirectTo } from "@/lib/redirect";
 
 export async function GET(request: NextRequest) {
-  return NextResponse.redirect(new URL("/", request.url), 303);
+  return redirectTo("/");
 }
 
 export async function POST(request: NextRequest) {
@@ -19,10 +20,10 @@ export async function POST(request: NextRequest) {
   const passwordOk = user ? await verifyPassword(password, user.passwordHash) : false;
 
   if (!user || !passwordOk) {
-    return NextResponse.redirect(new URL("/?error=1", request.url), 303);
+    return redirectTo("/?error=1");
   }
 
   setSession(user.id);
   await prisma.auditLog.create({ data: { actorId: user.id, action: "LOGIN", entity: "User", entityId: user.id } });
-  return NextResponse.redirect(new URL(user.role === Role.ADMIN ? "/admin" : "/team", request.url), 303);
+  return redirectTo(user.role === Role.ADMIN ? "/admin" : "/team");
 }

@@ -3,6 +3,7 @@ import { Role } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { verifyState, encryptToken } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
+import { redirectTo } from "@/lib/redirect";
 
 const STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
   const error = request.nextUrl.searchParams.get("error");
 
   if (error || !code || !state) {
-    return NextResponse.redirect(new URL("/clients?error=gmail-denied", request.url));
+    return redirectTo("/clients?error=gmail-denied");
   }
 
   let clientId: string;
@@ -25,12 +26,12 @@ export async function GET(request: NextRequest) {
     }
     clientId = verified.clientId;
   } catch {
-    return NextResponse.redirect(new URL("/clients?error=invalid-state", request.url));
+    return redirectTo("/clients?error=invalid-state");
   }
 
   const client = await prisma.clientProfile.findUnique({ where: { id: clientId }, select: { id: true } });
   if (!client) {
-    return NextResponse.redirect(new URL("/clients?error=missing-client", request.url));
+    return redirectTo("/clients?error=missing-client");
   }
 
   const redirectUri = `${process.env.APP_URL}/api/gmail/callback`;
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (!tokenRes.ok) {
-    return NextResponse.redirect(new URL(`/clients/${clientId}?error=gmail-token-failed`, request.url));
+    return redirectTo(`/clients/${clientId}?error=gmail-token-failed`);
   }
 
   const tokens = (await tokenRes.json()) as {
@@ -84,5 +85,5 @@ export async function GET(request: NextRequest) {
     }
   });
 
-  return NextResponse.redirect(new URL(`/clients/${clientId}?gmailConnected=1`, request.url));
+  return redirectTo(`/clients/${clientId}?gmailConnected=1`);
 }

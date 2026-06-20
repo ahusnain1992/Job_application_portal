@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Role } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { redirectTo } from "@/lib/redirect";
 
 const AssignSchema = z.object({
   userId: z.string().cuid(),
@@ -18,14 +19,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const form = await request.formData();
   const parsed = AssignSchema.safeParse({ userId: form.get("userId"), action: form.get("action") });
   if (!parsed.success) {
-    return NextResponse.redirect(new URL(`/clients/${params.id}?error=Invalid+request`, request.url), 303);
+    return redirectTo(`/clients/${params.id}?error=Invalid+request`);
   }
 
   const { userId, action } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    return NextResponse.redirect(new URL(`/clients/${params.id}?error=User+not+found`, request.url), 303);
+    return redirectTo(`/clients/${params.id}?error=User+not+found`);
   }
 
   if (action === "add") {
@@ -40,5 +41,5 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
   }
 
-  return NextResponse.redirect(new URL(`/clients/${params.id}?updated=1`, request.url), 303);
+  return redirectTo(`/clients/${params.id}?updated=1`);
 }

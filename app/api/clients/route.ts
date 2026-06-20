@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Role, WorkMode, EmploymentType } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { redirectTo } from "@/lib/redirect";
 
 const ClientCreateSchema = z.object({
   clientName: z.string().min(1).max(200),
@@ -54,13 +55,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return NextResponse.redirect(new URL("/resumes?error=invalid-resume", request.url), 303);
+      return redirectTo("/resumes?error=invalid-resume");
     }
 
     const { clientId, resumeName, fileUrl, rewriteToolUrl } = parsed.data;
     const client = await prisma.clientProfile.findUnique({ where: { id: clientId }, select: { id: true } });
     if (!client) {
-      return NextResponse.redirect(new URL("/resumes?error=client-not-found", request.url), 303);
+      return redirectTo("/resumes?error=client-not-found");
     }
 
     await prisma.resume.create({
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     await prisma.auditLog.create({
       data: { actorId: user.id, action: "RESUME_CREATED", entity: "ClientProfile", entityId: clientId }
     });
-    return NextResponse.redirect(new URL("/resumes", request.url), 303);
+    return redirectTo("/resumes");
   }
 
   const parsed = ClientCreateSchema.safeParse({
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
-    return NextResponse.redirect(new URL("/clients?error=invalid-client", request.url), 303);
+    return redirectTo("/clients?error=invalid-client");
   }
 
   const data = parsed.data;
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
       select: { id: true }
     });
     if (!teamMember) {
-      return NextResponse.redirect(new URL("/clients?error=invalid-team-member", request.url), 303);
+      return redirectTo("/clients?error=invalid-team-member");
     }
   }
 
@@ -146,5 +147,5 @@ export async function POST(request: NextRequest) {
     data: { actorId: user.id, action: "CLIENT_CREATED", entity: "ClientProfile", entityId: client.id }
   });
 
-  return NextResponse.redirect(new URL(`/clients/${client.id}`, request.url), 303);
+  return redirectTo(`/clients/${client.id}`);
 }
