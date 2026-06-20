@@ -93,3 +93,23 @@ Railway uses `railway.toml`:
 Do not run `prisma db push --accept-data-loss` in production. Schema changes should go through Prisma migrations.
 
 Use `npm run db:seed` only for demo/staging data, not for production client data.
+
+## First Production Admin
+
+For production, do not use the demo seed unless the database is disposable. The demo seed deletes existing data.
+
+Instead, set these Railway variables temporarily:
+
+```bash
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=a-long-unique-password
+ADMIN_NAME="Your Name"
+```
+
+Then run:
+
+```bash
+npm run db:bootstrap-admin
+```
+
+This safely creates or updates one admin user without deleting clients, jobs, or applications. After the admin is created, remove or rotate `ADMIN_PASSWORD` in Railway.
