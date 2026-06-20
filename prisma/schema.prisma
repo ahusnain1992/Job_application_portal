@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEAM_MEMBER
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WorkMode {
+  REMOTE
+  HYBRID
+  ONSITE
+  FLEXIBLE
+}
+
+enum EmploymentType {
+  FULL_TIME
+  CONTRACT
+  C2C
+  W2
+  PART_TIME
+  INTERNSHIP
+  UNKNOWN
+}
+
+enum JobStatus {
+  NEW
+  SUGGESTED
+  APPROVED
+  ASSIGNED
+  OPENED
+  IN_PROGRESS
+  APPLIED
+  SKIPPED
+  NOT_RELEVANT
+  DUPLICATE
+  SAVED_FOR_LATER
+  FOLLOW_UP_NEEDED
+  INTERVIEW_RECEIVED
+  REJECTED
+  CLOSED
+  ERROR_COULD_NOT_APPLY
+}
+
+enum SourceType {
+  APIFY
+  SERPAPI
+  RSS
+  CSV
+  MANUAL
+  CAREER_PAGE
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  name               String
+  email              String              @unique
+  passwordHash       String
+  role               Role                @default(TEAM_MEMBER)
+  active             Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  clientAssignments  ClientAssignment[]
+  jobAssignments     JobAssignment[]
+  applications       Application[]       @relation("AppliedBy")
+  updatedApplications Application[]      @relation("ApplicationUpdatedBy")
+  statusHistory      ApplicationStatusHistory[]
+  notes              Note[]
+  auditLogs          AuditLog[]
+  jobsOpened         Job[]               @relation("JobOpenedBy")
+}
+
+model ClientProfile {
+  id                       String             @id @default(cuid())
+  clientName               String
+  currentJobTitle          String
+  targetJobTitles          String[]
+  alternativeJobTitles     String[]
+  yearsOfExperience        Int?
+  mainSkills               String[]
+  secondarySkills          String[]
+  preferredLocations       String[]
+  workModePreference       WorkMode           @default(FLEXIBLE)
+  employmentTypePreference EmploymentType     @default(UNKNOWN)
+  minimumSalary            Int?
+  maximumSalary            Int?
+  cvText                   String?
+  resumeUrl                String?
+  linkedinUrl              String?
+  portfolioUrl             String?
+  workAuthorizationNotes   String?
+  sponsorshipRequirement   String?
+  industriesPreferred      String[]
+  industriesToAvoid        String[]
+  keywordsInclude          String[]
+  keywordsExclude          String[]
+  applicationNotes         String?
+  gmailEmail               String?
+  gmailAccessToken         String?
+  gmailRefreshToken        String?
+  gmailConnectedAt         DateTime?
+  resumePdfLimit           Int                @default(50)
+  status                   ClientStatus       @default(ACTIVE)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  assignments              ClientAssignment[]
+  resumes                  Resume[]
+  jobs                     Job[]
+  applications             Application[]
+  dailyTargets             DailyTarget[]
+  notes                    Note[]
+}
+
+model ClientAssignment {
+  id        String        @id @default(cuid())
+  clientId  String
+  userId    String
+  createdAt DateTime      @default(now())
+  client    ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, userId])
+}
+
+model DailyTarget {
+  id        String        @id @default(cuid())
+  clientId  String
+  userId    String
+  target    Int           @default(15)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  client    ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, userId])
+}
+
+model Resume {
+  id          String        @id @default(cuid())
+  clientId    String
+  name        String
+  fileUrl     String?
+  rewriteToolUrl String?
+  active      Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  client      ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  applications Application[]
+}
+
+model JobSource {
+  id             String     @id @default(cuid())
+  name           String
+  type           SourceType
+  enabled        Boolean    @default(true)
+  actorId        String?
+  apiTokenRef    String?
+  schedule       String     @default("MANUAL")
+  searchParams   Json?
+  lastRunAt      DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  jobs           Job[]
+}
+
+model DuplicateGroup {
+  id        String   @id @default(cuid())
+  signature String   @unique
+  createdAt DateTime @default(now())
+  jobs      Job[]
+}
+
+model Job {
+  id                    String          @id @default(cuid())
+  externalId            String?
+  sourceId              String?
+  sourceName            String
+  sourceUrl             String?
+  originalJobUrl        String?
+  companyName           String
+  title                 String
+  location              String
+  workMode              WorkMode        @default(FLEXIBLE)
+  employmentType        EmploymentType  @default(UNKNOWN)
+  salaryMin             Int?
+  salaryMax             Int?
+  description           String
+  requiredSkills        String[]
+  preferredSkills       String[]
+  postedDate            DateTime?
+  discoveredAt          DateTime        @default(now())
+  applyUrl              String?
+  companyCareerPageUrl  String?
+  atsPlatform           String?
+  duplicateGroupId      String?
+  matchScore            Int             @default(0)
+  matchExplanation      String          @default("")
+  matchWarnings         String[]
+  resumeRecommendation  String?
+  resumeCoverageScore   Int?
+  missingKeywords       String[]
+  coveredKeywords       String[]
+  resumeClusterId       String?
+  status                JobStatus       @default(NEW)
+  clientId              String
+  assignedTeamMemberId  String?
+  appliedById           String?
+  appliedDate           DateTime?
+  resumeVersionUsed     String?
+  notesText             String?
+  openedAt              DateTime?
+  openedById            String?
+  lockExpiresAt         DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  source                JobSource?      @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  client                ClientProfile   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  duplicateGroup        DuplicateGroup? @relation(fields: [duplicateGroupId], references: [id])
+  openedBy              User?           @relation("JobOpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
+  assignments           JobAssignment[]
+  applications          Application[]
+  notes                 Note[]
+
+  @@index([clientId, status])
+  @@index([companyName, title])
+}
+
+model JobAssignment {
+  id        String   @id @default(cuid())
+  jobId     String
+  userId    String
+  createdAt DateTime @default(now())
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, userId])
+}
+
+model Application {
+  id                 String      @id @default(cuid())
+  clientId           String
+  jobId              String
+  status             JobStatus
+  assignedTeamMemberId String?
+  appliedById        String?
+  appliedDateTime    DateTime?
+  resumeId           String?
+  coverLetterUsed    String?
+  notes              String?
+  reasonSkipped      String?
+  lastUpdatedById    String?
+  openedAt           DateTime?
+  timeSpentMinutes   Int?
+  confirmationNumber String?
+  proofUrl           String?
+  verifiedByGmail    Boolean     @default(false)
+  flaggedFast        Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  client             ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  job                Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  appliedBy          User?       @relation("AppliedBy", fields: [appliedById], references: [id], onDelete: SetNull)
+  lastUpdatedBy      User?       @relation("ApplicationUpdatedBy", fields: [lastUpdatedById], references: [id], onDelete: SetNull)
+  resume             Resume?     @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  statusHistory      ApplicationStatusHistory[]
+
+  @@unique([clientId, jobId])
+}
+
+model ApplicationStatusHistory {
+  id            String      @id @default(cuid())
+  applicationId String
+  status        JobStatus
+  changedById   String?
+  note          String?
+  createdAt     DateTime    @default(now())
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  changedBy     User?       @relation(fields: [changedById], references: [id], onDelete: SetNull)
+}
+
+model Note {
+  id        String         @id @default(cuid())
+  clientId  String?
+  jobId     String?
+  userId    String?
+  body      String
+  createdAt DateTime       @default(now())
+  client    ClientProfile? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  job       Job?           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}
