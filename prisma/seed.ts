@@ -76,7 +76,7 @@ async function main() {
   await prisma.dailyTarget.createMany({
     data: [
       { clientId: client.id, userId: maria.id, target: 18 },
-      { clientId: client.id, userId: jamal.id, target: 15 }
+      { clientId: client.id, userId: jamal.id, target: 30 }
     ]
   });
 

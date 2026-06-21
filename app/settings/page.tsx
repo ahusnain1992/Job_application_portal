@@ -6,10 +6,12 @@ import { prisma } from "@/lib/prisma";
 
 export default async function SettingsPage({ searchParams }: { searchParams: { error?: string } }) {
   await requireRole(Role.ADMIN);
-  const [sources, teamMembers] = await Promise.all([
+  const [sources, teamMembers, dailyTargets] = await Promise.all([
     prisma.jobSource.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.user.findMany({ where: { role: Role.TEAM_MEMBER }, orderBy: { name: "asc" } })
+    prisma.user.findMany({ where: { role: Role.TEAM_MEMBER }, orderBy: { name: "asc" } }),
+    prisma.dailyTarget.findMany({ select: { userId: true, target: true } })
   ]);
+  const targetByUser = Object.fromEntries(dailyTargets.map((t) => [t.userId, t.target]));
 
   const errorMessages: Record<string, string> = {
     "missing-fields": "Name, email, and password are all required.",
@@ -48,7 +50,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
                   <div className="font-medium text-ink">{member.name}</div>
                   <div className="text-sm text-muted">{member.email}</div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <form action="/api/users/daily-target" method="post" className="flex items-center gap-1.5">
+                    <input type="hidden" name="userId" value={member.id} />
+                    <label className="text-xs text-muted">Target/day</label>
+                    <input
+                      type="number"
+                      name="target"
+                      min={1}
+                      max={100}
+                      defaultValue={targetByUser[member.id] ?? 30}
+                      className="h-7 w-16 rounded border border-line px-2 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-brand/30"
+                    />
+                    <button className="h-7 rounded bg-brand px-2 text-xs font-semibold text-white hover:bg-brand/90">Set</button>
+                  </form>
                   <Badge tone={member.active ? "brand" : "neutral"}>{member.active ? "Active" : "Inactive"}</Badge>
                   <form action="/api/users" method="post">
                     <input type="hidden" name="userId" value={member.id} />

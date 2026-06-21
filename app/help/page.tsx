@@ -104,7 +104,7 @@ export default async function HelpPage() {
               />
               <FaqItem
                 q="What is the daily target?"
-                a="Your admin sets a daily target (default is 15 applications per day). The progress bar on your dashboard tracks how close you are. Skipped jobs don't count."
+                a="Your admin sets a daily target (default is 30 applications per day). The progress bar on your dashboard tracks how close you are. Skipped jobs don't count."
               />
             </div>
           </section>

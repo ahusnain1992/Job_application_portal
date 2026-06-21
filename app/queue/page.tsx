@@ -119,7 +119,7 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
   const needsRewrite = sorted.filter((j) => queueLabel(j.resumeRecommendation, j.matchScore, !!j.applyUrl).priority === 2);
   const reviewRequired = sorted.filter((j) => queueLabel(j.resumeRecommendation, j.matchScore, !!j.applyUrl).priority >= 3);
 
-  const dailyTargetNum = dailyTarget?.target ?? 15;
+  const dailyTargetNum = dailyTarget?.target ?? 30;
 
   return (
     <AppShell>

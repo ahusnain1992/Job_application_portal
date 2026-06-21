@@ -198,6 +198,62 @@ export async function fetchJobsForClient(client: ClientWithResumes): Promise<Fet
   return summary;
 }
 
+// Country → location keywords used for matching job location strings
+const COUNTRY_KEYWORDS: Record<string, string[]> = {
+  "usa": ["united states", "usa", ", us", "u.s.", "america"],
+  "united states": ["united states", "usa", ", us", "u.s.", "america"],
+  "uk": ["united kingdom", "england", "london", "manchester", "birmingham", ", uk", "britain", "scotland", "wales"],
+  "united kingdom": ["united kingdom", "england", "london", "manchester", ", uk", "britain", "scotland", "wales"],
+  "canada": ["canada", "ontario", "toronto", "vancouver", "calgary", "british columbia", "montreal", "québec"],
+  "australia": ["australia", "sydney", "melbourne", "brisbane", "perth", "canberra"],
+  "germany": ["germany", "berlin", "munich", "frankfurt", "hamburg", "köln", "cologne", "düsseldorf"],
+  "india": ["india", "bangalore", "mumbai", "hyderabad", "delhi", "pune", "chennai"],
+};
+
+function locationMatchesClient(jobLocation: string, client: ClientWithResumes): boolean {
+  const loc = jobLocation.toLowerCase();
+  const isRemoteLabel = loc.includes("remote") || loc.includes("worldwide") || loc.includes("anywhere");
+
+  // "worldwide" / no-country remote is fine only if client also wants REMOTE and no country preference
+  if (isRemoteLabel && client.preferredCountries.length === 0 && client.preferredCities.length === 0) {
+    return true;
+  }
+
+  // City-level match (most specific — check first)
+  const cities = client.preferredCities;
+  if (cities.length > 0) {
+    const cityHit = cities.some((city) =>
+      city.toLowerCase().split(/[\s,]+/).filter((p) => p.length > 1).some((p) => loc.includes(p))
+    );
+    if (cityHit) return true;
+  }
+
+  // Country-level match
+  const countries = client.preferredCountries;
+  if (countries.length > 0) {
+    const countryHit = countries.some((c) => {
+      const keywords = COUNTRY_KEYWORDS[c.toLowerCase()] ?? [c.toLowerCase()];
+      return keywords.some((kw) => loc.includes(kw));
+    });
+    if (countryHit) return true;
+    // If the job says "remote" but client has specific country preferences, only allow it
+    // when it explicitly says "remote" in the client's preferred country context.
+    // Reject pure-worldwide remote for clients with country preferences (avoid Germany/India remote jobs).
+    if (isRemoteLabel) return false;
+    return false;
+  }
+
+  // Fall back to preferredLocations free-text
+  if (client.preferredLocations.length > 0) {
+    return client.preferredLocations.some((pref) => {
+      const parts = pref.toLowerCase().split(/[\s,]+/).filter((p) => p.length > 1);
+      return parts.some((p) => loc.includes(p));
+    });
+  }
+
+  return false;
+}
+
 function isJobRelevant(job: NormalizedJob, client: ClientWithResumes): boolean {
   const allTitles = [...client.targetJobTitles, ...client.alternativeJobTitles];
   const jobTitleLower = job.title.toLowerCase();
@@ -208,51 +264,14 @@ function isJobRelevant(job: NormalizedJob, client: ClientWithResumes): boolean {
   });
   if (!titleMatch) return false;
 
+  // Client strictly wants remote — only keep remote/flexible jobs that also pass location check
   if (client.workModePreference === WorkMode.REMOTE) {
-    return job.workMode === WorkMode.REMOTE || job.workMode === WorkMode.FLEXIBLE ||
-      job.location.toLowerCase().includes("remote") || job.location.toLowerCase().includes("worldwide");
+    const isRemoteMode = job.workMode === WorkMode.REMOTE || job.workMode === WorkMode.FLEXIBLE;
+    const isRemoteLabel = job.location.toLowerCase().includes("remote") || job.location.toLowerCase().includes("worldwide");
+    if (!isRemoteMode && !isRemoteLabel) return false;
   }
 
-  if (job.workMode === WorkMode.REMOTE || job.workMode === WorkMode.HYBRID) return true;
-  if (job.location.toLowerCase().includes("remote")) return true;
-
-  const jobLocationLower = job.location.toLowerCase();
-  const cities = client.preferredCities;
-
-  if (cities.length > 0) {
-    const cityMatch = cities.some((city) =>
-      city.toLowerCase().split(/[\s,]+/).filter((p) => p.length > 1).some((p) => jobLocationLower.includes(p))
-    );
-    if (cityMatch) return true;
-  }
-
-  const countryKeywords: Record<string, string[]> = {
-    "usa": ["united states", "usa", ", us", "u.s."],
-    "united states": ["united states", "usa", ", us"],
-    "uk": ["united kingdom", "england", ", uk", "britain"],
-    "united kingdom": ["united kingdom", "england", "britain", ", uk"],
-    "canada": ["canada", "ontario", "toronto", "vancouver", "calgary"],
-    "australia": ["australia", "sydney", "melbourne", "brisbane"],
-    "germany": ["germany", "berlin", "munich", "frankfurt"],
-  };
-
-  const countries = client.preferredCountries;
-  if (countries.length > 0) {
-    const countryMatch = countries.some((c) => {
-      const keywords = countryKeywords[c.toLowerCase()] || [c.toLowerCase()];
-      return keywords.some((kw) => jobLocationLower.includes(kw));
-    });
-    if (countryMatch) return true;
-  }
-
-  if (cities.length === 0 && countries.length === 0) {
-    return client.preferredLocations.some((loc) => {
-      const parts = loc.toLowerCase().split(/[\s,]+/).filter((p) => p.length > 1);
-      return parts.some((p) => jobLocationLower.includes(p));
-    });
-  }
-
-  return false;
+  return locationMatchesClient(job.location, client);
 }
 
 async function ensureSources(names: string[]) {

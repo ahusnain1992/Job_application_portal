@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { JobStatus, Role } from "@prisma/client";
 import { ArrowRight, CheckCircle2, Clock, Target, Users, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/shell";
@@ -7,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 
 export default async function TeamDashboard() {
   const user = await requireUser();
+  if (user.role === Role.ADMIN) redirect("/admin");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -66,7 +68,7 @@ export default async function TeamDashboard() {
       : Promise.resolve(null)
   ]);
 
-  const dailyTargetNum = dailyTarget?.target ?? 15;
+  const dailyTargetNum = dailyTarget?.target ?? 30;
   const progressPct = Math.min(100, Math.round((appliedToday / dailyTargetNum) * 100));
   const remaining = Math.max(0, dailyTargetNum - appliedToday);
 
