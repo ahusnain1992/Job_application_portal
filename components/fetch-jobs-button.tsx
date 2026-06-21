@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { RefreshCw, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { RefreshCw, CheckCircle, AlertTriangle, Clock, Zap } from "lucide-react";
 
 const COOLDOWN_HOURS = 6;
 const COOLDOWN_MS = COOLDOWN_HOURS * 60 * 60 * 1000;
@@ -67,22 +67,38 @@ export function FetchJobsButton({ lastRunAt }: { lastRunAt: string | null }) {
 
   const isCooldown = state === "cooldown";
   const isLoading = state === "loading";
-  const disabled = isCooldown || isLoading;
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <button
-        onClick={!disabled ? handleFetch : undefined}
-        disabled={disabled}
-        title={isCooldown ? `Next fetch available in ${formatTimeLeft(timeLeft)}` : "Fetch jobs from all sources"}
-        className="focus-ring inline-flex items-center gap-2 rounded-md border border-brand bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-[#12564C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {isCooldown ? <Clock size={15} /> : <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />}
-        {isLoading ? "Fetching jobs…" : isCooldown ? `Next fetch in ${formatTimeLeft(timeLeft)}` : "Fetch Jobs Now"}
-      </button>
+    <div className="flex flex-col items-end gap-1.5">
+      <div className="flex items-center gap-2">
+        {/* Primary button — disabled during cooldown */}
+        <button
+          onClick={!isLoading && !isCooldown ? handleFetch : undefined}
+          disabled={isLoading || isCooldown}
+          title={isCooldown ? "Cooldown active — use Force Refresh to override" : "Fetch new jobs from all sources"}
+          className="focus-ring inline-flex items-center gap-2 rounded-md border border-brand bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-[#12564C] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isCooldown ? <Clock size={15} /> : <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />}
+          {isLoading ? "Fetching jobs…" : isCooldown ? `Cooldown — ${formatTimeLeft(timeLeft)} left` : "Fetch Jobs Now"}
+        </button>
 
-      {isCooldown && (
-        <div className="text-xs text-muted">6-hour cooldown · controls Apify spend</div>
+        {/* Force refresh — always available to admin, bypasses client-side cooldown timer */}
+        {isCooldown && !isLoading && (
+          <button
+            onClick={handleFetch}
+            title="Force refresh now — bypasses the 6-hour cooldown. Will use Apify/Adzuna API credits."
+            className="focus-ring inline-flex items-center gap-1.5 rounded-md border border-warn/60 bg-[#FFF6EB] px-3 py-2 text-xs font-semibold text-[#8A4604] hover:bg-[#FFECD0] transition-colors"
+          >
+            <Zap size={12} />
+            Force refresh
+          </button>
+        )}
+      </div>
+
+      {isCooldown && !isLoading && (
+        <div className="text-xs text-muted text-right">
+          6-hour cooldown active · Force refresh uses API credits
+        </div>
       )}
       {state === "success" && (
         <div className="flex items-center gap-1.5 text-xs text-brand">
