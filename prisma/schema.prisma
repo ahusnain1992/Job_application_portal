@@ -271,6 +271,9 @@ model Application {
   proofUrl           String?
   verifiedByGmail    Boolean     @default(false)
   flaggedFast        Boolean     @default(false)
+  flagDismissed      Boolean     @default(false)
+  flagDismissedById  String?
+  flagDismissedAt    DateTime?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   client             ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)

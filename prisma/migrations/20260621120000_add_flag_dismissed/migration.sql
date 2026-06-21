@@ -1,0 +1,3 @@
+ALTER TABLE "Application" ADD COLUMN IF NOT EXISTS "flagDismissed" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Application" ADD COLUMN IF NOT EXISTS "flagDismissedById" TEXT;
+ALTER TABLE "Application" ADD COLUMN IF NOT EXISTS "flagDismissedAt" TIMESTAMP(3);

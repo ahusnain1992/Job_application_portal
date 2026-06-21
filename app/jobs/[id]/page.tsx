@@ -8,6 +8,7 @@ import { ActionForm } from "@/components/action-form";
 import { CoverLetterButton } from "@/components/cover-letter-button";
 import { ResumeHandoffButton } from "@/components/resume-handoff-button";
 import { ResumeRewriteButton } from "@/components/resume-rewrite-button";
+import { DismissFlagButton } from "@/components/dismiss-flag-button";
 import { Badge, PageHeader, Panel } from "@/components/ui";
 import { money, relativeDate, shortDate, statusLabel, workModeLabel } from "@/lib/format";
 import { requireUser, requireClientAccess } from "@/lib/auth";
@@ -73,6 +74,7 @@ export default async function JobDetailPage({
   ) ?? job.client.resumes[0] ?? null;
 
   const hasProof = !!(app?.confirmationNumber || app?.proofUrl || app?.verifiedByGmail);
+  const isAdmin = user.role === Role.ADMIN;
 
   return (
     <AppShell>
@@ -184,7 +186,7 @@ export default async function JobDetailPage({
         }>
           {statusLabel(job.status)}
         </Badge>
-        {app?.flaggedFast && !app.verifiedByGmail && (
+        {app?.flaggedFast && !app.verifiedByGmail && !(app as any).flagDismissed && (
           <span className="inline-flex items-center gap-1 rounded bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
             <AlertTriangle size={11} /> Applied in {app.timeSpentMinutes} min — flagged
           </span>
@@ -299,11 +301,21 @@ export default async function JobDetailPage({
                   </div>
                 )}
                 {app?.timeSpentMinutes != null && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Clock size={14} className="text-muted" />
                     <span className="text-muted">Time spent: {app.timeSpentMinutes} minutes</span>
-                    {app.flaggedFast && <Badge tone="danger">Flagged — too fast</Badge>}
+                    {app.flaggedFast && !(app as any).flagDismissed && (
+                      <Badge tone="danger">Flagged — too fast</Badge>
+                    )}
+                    {(app as any).flagDismissed && (
+                      <span className="inline-flex items-center gap-1 rounded bg-[#ECF7F4] px-2 py-0.5 text-xs text-[#186A5E]">
+                        ✓ Flag reviewed by admin
+                      </span>
+                    )}
                   </div>
+                )}
+                {app?.flaggedFast && !(app as any).flagDismissed && isAdmin && (
+                  <DismissFlagButton applicationId={app.id} />
                 )}
                 {app?.resume && (
                   <div>
