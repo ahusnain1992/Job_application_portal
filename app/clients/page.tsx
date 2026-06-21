@@ -39,7 +39,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { er
         <Panel title={`${clients.filter(c => c.status === "ACTIVE").length} active clients`}>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {clients.filter(c => c.status === "ACTIVE").length === 0 ? (
-              <div className="col-span-3 py-8 text-center text-sm text-muted">No active clients yet. Use "Add client" below to create the first one.</div>
+              <div className="col-span-3 py-8 text-center text-sm text-muted">No active clients yet. Use &ldquo;Add client&rdquo; below to create the first one.</div>
             ) : clients.filter(c => c.status === "ACTIVE").map((client) => (
               <Link key={client.id} href={`/clients/${client.id}`} className="rounded-lg border border-line p-4 hover:bg-canvas transition-colors">
                 <div className="flex items-start justify-between gap-3">
