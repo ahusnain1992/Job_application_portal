@@ -36,7 +36,7 @@ export default async function JobDetailPage({
           applicationNotes: true,
           cvText: true,
           workAuthorizationNotes: true,
-          resumes: { where: { active: true } }
+          resumes: { where: { active: true }, select: { id: true, name: true, fileUrl: true, resumeText: true } }
         }
       },
       applications: {
@@ -222,13 +222,8 @@ export default async function JobDetailPage({
           {/* Resume decision */}
           <ResumeRecommendationPanel job={job} />
 
-          {/* AI resume rewrite */}
-          <Panel title="AI Resume Rewrite">
-            <p className="mb-3 text-sm text-muted">
-              Claude rewrites the client&apos;s CV to better match this job — highlighting relevant experience, incorporating missing keywords, and strengthening phrasing. <strong>Always review before use.</strong>
-            </p>
-            <ResumeRewriteButton jobId={job.id} hasCvText={!!job.client.cvText?.trim()} />
-          </Panel>
+          {/* Resume recommendation — best master resume or AI rewrite */}
+          <BestResumePanel job={job} />
 
           {/* Job details */}
           <Panel title="Job details">
@@ -447,6 +442,115 @@ function ResumeRecommendationPanel({
               </span>
             ))}
           </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function BestResumePanel({ job }: {
+  job: {
+    id: string;
+    bestResumeId?: string | null;
+    bestResumeName?: string | null;
+    resumeRecommendation: string | null;
+    resumeCoverageScore: number | null;
+    client: {
+      cvText?: string | null;
+      resumes: { id: string; name: string; fileUrl?: string | null; resumeText?: string | null }[];
+    };
+  }
+}) {
+  const recommendation = job.resumeRecommendation;
+  const needsRewrite = recommendation === "FULL_REWRITE" || recommendation === "NEW_VERSION";
+  const hasResumes = job.client.resumes.length > 0;
+  const hasCvText = !!job.client.cvText?.trim();
+
+  // Find the best resume object from the client's resume list
+  const bestResume = job.bestResumeId
+    ? job.client.resumes.find((r) => r.id === job.bestResumeId)
+    : null;
+
+  // No resumes and no cvText — nothing to show
+  if (!hasResumes && !hasCvText) return null;
+
+  return (
+    <Panel title="Resume to use">
+      {bestResume ? (
+        <div className="space-y-3">
+          {/* Best resume card */}
+          <div className={`rounded-md border px-4 py-3 ${
+            needsRewrite
+              ? "border-warn/40 bg-[#FFF6EB]"
+              : recommendation === "MINOR_TAILORING"
+              ? "border-blue-200 bg-blue-50"
+              : "border-brand/30 bg-[#ECF7F4]"
+          }`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${needsRewrite ? "text-[#8A4604]" : "text-[#186A5E]"}`}>
+                  {needsRewrite ? "⚠ Rewrite recommended" : recommendation === "MINOR_TAILORING" ? "✏️ Minor tailoring" : "✅ Use as-is"}
+                </div>
+                <div className="font-semibold text-sm text-ink">{bestResume.name}</div>
+                {job.resumeCoverageScore !== null && (
+                  <div className="mt-1 text-xs text-muted">{job.resumeCoverageScore}% of job requirements covered</div>
+                )}
+              </div>
+              {bestResume.fileUrl && (
+                bestResume.fileUrl.startsWith("data:") ? (
+                  <a href={bestResume.fileUrl} download={`${bestResume.name}.pdf`} className="shrink-0 rounded border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:bg-canvas">
+                    Download
+                  </a>
+                ) : (
+                  <a href={bestResume.fileUrl} target="_blank" rel="noreferrer" className="shrink-0 rounded border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:bg-canvas">
+                    Open resume
+                  </a>
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Other resumes for reference */}
+          {job.client.resumes.length > 1 && (
+            <details className="text-xs text-muted">
+              <summary className="cursor-pointer hover:text-ink">Other resume versions ({job.client.resumes.length - 1})</summary>
+              <div className="mt-2 space-y-1 pl-2">
+                {job.client.resumes.filter((r) => r.id !== bestResume.id).map((r) => (
+                  <div key={r.id} className="flex items-center gap-2">
+                    <span>{r.name}</span>
+                    {r.fileUrl && (
+                      <a href={r.fileUrl} target={r.fileUrl.startsWith("data:") ? undefined : "_blank"} rel="noreferrer"
+                        download={r.fileUrl.startsWith("data:") ? `${r.name}.pdf` : undefined}
+                        className="text-brand hover:underline">
+                        {r.fileUrl.startsWith("data:") ? "Download" : "View"}
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+
+          {/* Only show AI rewrite when genuinely needed */}
+          {needsRewrite && (
+            <div className="border-t border-line pt-3">
+              <p className="mb-2 text-xs text-muted">
+                The best resume only covers {job.resumeCoverageScore}% of this job&apos;s requirements. Use AI to tailor it — then review before sending.
+              </p>
+              <ResumeRewriteButton jobId={job.id} hasCvText={hasCvText || !!bestResume.resumeText} />
+            </div>
+          )}
+        </div>
+      ) : (
+        // No best resume matched — fall back to AI rewrite if cvText exists
+        <div className="space-y-3">
+          <p className="text-sm text-muted">
+            No master resume versions have been added for this client yet, or their resume text hasn&apos;t been pasted in.
+            {hasCvText ? " Using CV text for AI rewrite." : " Add resumes on the Resumes page."}
+          </p>
+          {hasCvText && (
+            <ResumeRewriteButton jobId={job.id} hasCvText={true} />
+          )}
         </div>
       )}
     </Panel>

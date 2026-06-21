@@ -38,6 +38,7 @@ const ResumeCreateSchema = z.object({
   clientId: z.string().cuid(),
   resumeName: z.string().min(1).max(200),
   fileUrl: urlOrDataUrl,
+  resumeText: z.string().max(50000).optional().nullable(),
   rewriteToolUrl: z.string().url().max(2000).optional().nullable().or(z.literal(""))
 });
 
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
       clientId: form.get("clientId") || undefined,
       resumeName: form.get("resumeName") || undefined,
       fileUrl: form.get("fileUrl") || "",
+      resumeText: form.get("resumeText") || null,
       rewriteToolUrl: form.get("rewriteToolUrl") || ""
     });
 
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
       return redirectTo("/resumes?error=invalid-resume");
     }
 
-    const { clientId, resumeName, fileUrl, rewriteToolUrl } = parsed.data;
+    const { clientId, resumeName, fileUrl, resumeText, rewriteToolUrl } = parsed.data;
     const client = await prisma.clientProfile.findUnique({ where: { id: clientId }, select: { id: true } });
     if (!client) {
       return redirectTo("/resumes?error=client-not-found");
@@ -76,6 +78,7 @@ export async function POST(request: NextRequest) {
         clientId,
         name: resumeName,
         fileUrl: fileUrl || null,
+        resumeText: resumeText?.trim() || null,
         rewriteToolUrl: rewriteToolUrl || null
       }
     });

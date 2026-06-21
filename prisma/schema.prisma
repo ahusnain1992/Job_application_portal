@@ -146,15 +146,17 @@ model DailyTarget {
 }
 
 model Resume {
-  id          String        @id @default(cuid())
-  clientId    String
-  name        String
-  fileUrl     String?
+  id             String        @id @default(cuid())
+  clientId       String
+  name           String
+  fileUrl        String?
+  resumeText     String?
   rewriteToolUrl String?
-  active      Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  client      ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  applications Application[]
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  client         ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  applications   Application[]
+  suggestedForJobs Job[]       @relation("BestResumeForJob")
 }
 
 model JobSource {
@@ -210,6 +212,8 @@ model Job {
   missingKeywords       String[]
   coveredKeywords       String[]
   resumeClusterId       String?
+  bestResumeId          String?
+  bestResumeName        String?
   status                JobStatus       @default(NEW)
   clientId              String
   assignedTeamMemberId  String?
@@ -225,6 +229,7 @@ model Job {
   source                JobSource?      @relation(fields: [sourceId], references: [id], onDelete: SetNull)
   client                ClientProfile   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   duplicateGroup        DuplicateGroup? @relation(fields: [duplicateGroupId], references: [id])
+  bestResume            Resume?         @relation("BestResumeForJob", fields: [bestResumeId], references: [id], onDelete: SetNull)
   openedBy              User?           @relation("JobOpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
   assignments           JobAssignment[]
   applications          Application[]

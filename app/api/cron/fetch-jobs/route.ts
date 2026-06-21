@@ -60,7 +60,13 @@ export async function GET(req: NextRequest) {
 
   try {
     const activeClients = await prisma.clientProfile.findMany({
-      where: { status: "ACTIVE" }
+      where: { status: "ACTIVE" },
+      include: {
+        resumes: {
+          where: { active: true },
+          select: { id: true, name: true, resumeText: true }
+        }
+      }
     });
 
     // Build providers from env
@@ -147,15 +153,37 @@ export async function GET(req: NextRequest) {
             client
           );
 
-          const resumeAnalysis = client.cvText
-            ? analyzeResumeJobFit(
-                client.cvText,
+          // Score job against every active master resume, pick the best fit
+          const resumeCandidates = client.resumes.filter((r) => r.resumeText?.trim());
+          let bestResume: { id: string; name: string } | null = null;
+          let resumeAnalysis = null;
+
+          if (resumeCandidates.length > 0) {
+            let bestScore = -1;
+            for (const resume of resumeCandidates) {
+              const analysis = analyzeResumeJobFit(
+                resume.resumeText!,
                 job.description,
                 job.requiredSkills,
                 job.title,
                 client.currentJobTitle
-              )
-            : null;
+              );
+              if (analysis.coverageScore > bestScore) {
+                bestScore = analysis.coverageScore;
+                resumeAnalysis = analysis;
+                bestResume = { id: resume.id, name: resume.name };
+              }
+            }
+          } else if (client.cvText) {
+            // Fall back to legacy cvText if no master resumes have text yet
+            resumeAnalysis = analyzeResumeJobFit(
+              client.cvText,
+              job.description,
+              job.requiredSkills,
+              job.title,
+              client.currentJobTitle
+            );
+          }
 
           await prisma.job.create({
             data: {
@@ -186,6 +214,8 @@ export async function GET(req: NextRequest) {
               resumeCoverageScore: resumeAnalysis?.coverageScore ?? null,
               missingKeywords: resumeAnalysis?.missingKeywords ?? [],
               coveredKeywords: resumeAnalysis?.coveredKeywords ?? [],
+              bestResumeId: bestResume?.id ?? null,
+              bestResumeName: bestResume?.name ?? null,
               resumeClusterId: resumeAnalysis?.clusterId ?? null,
               status: JobStatus.SUGGESTED,
               clientId: client.id
