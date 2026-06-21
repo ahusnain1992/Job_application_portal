@@ -1,8 +1,8 @@
 import { JobStatus, Role } from "@prisma/client";
-import { Filter, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { JobTable } from "@/components/job-table";
-import { PageHeader, Panel, Select, SubmitButton, TextArea, TextInput } from "@/components/ui";
+import { PageHeader, Panel, Select, TextArea, TextInput } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -42,42 +42,98 @@ export default async function JobsPage({ searchParams }: { searchParams: { statu
   return (
     <AppShell>
       <PageHeader title="Jobs" eyebrow="Discovery and tracking" />
-      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-        <div className="space-y-6">
-          <Panel title="Filters" action={<Filter size={18} />}>
-            <form className="space-y-3">
-              <TextInput name="q" placeholder="Company, title, location" defaultValue={searchParams.q || ""} />
-              <Select name="clientId" defaultValue={searchParams.clientId || ""}>
-                <option value="">All clients</option>
-                {clients.map((client) => <option key={client.id} value={client.id}>{client.clientName}</option>)}
-              </Select>
-              <Select name="status" defaultValue={searchParams.status || ""}>
-                <option value="">All statuses</option>
-                {Object.values(JobStatus).map((status) => <option key={status} value={status}>{status}</option>)}
-              </Select>
-              <SubmitButton>Apply filters</SubmitButton>
-            </form>
-          </Panel>
-          <Panel title="Manual import" action={<Upload size={18} />}>
-            <form action="/api/jobs/import" method="post" className="space-y-3">
-              <Select name="clientId" required>
-                <option value="">Select client</option>
-                {clients.map((client) => <option key={client.id} value={client.id}>{client.clientName}</option>)}
-              </Select>
-              <TextInput name="title" placeholder="Job title" required />
-              <TextInput name="companyName" placeholder="Company" required />
-              <TextInput name="location" placeholder="Location" required />
-              <TextInput name="applyUrl" placeholder="Apply URL" />
-              <TextInput name="requiredSkills" placeholder="Required skills, comma separated" />
-              <TextArea name="description" placeholder="Job description" required />
-              <SubmitButton>Import job</SubmitButton>
-            </form>
-          </Panel>
+
+      {/* Filters — top bar */}
+      <form className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[160px]">
+          <label className="mb-1 block text-xs font-medium text-muted">Search</label>
+          <TextInput name="q" placeholder="Company, title, location" defaultValue={searchParams.q || ""} />
         </div>
-        <Panel title={`${jobs.length} jobs`}>
-          <JobTable jobs={jobs} />
-        </Panel>
-      </div>
+        <div className="min-w-[160px]">
+          <label className="mb-1 block text-xs font-medium text-muted">Client</label>
+          <Select name="clientId" defaultValue={searchParams.clientId || ""}>
+            <option value="">All clients</option>
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.clientName}</option>)}
+          </Select>
+        </div>
+        <div className="min-w-[160px]">
+          <label className="mb-1 block text-xs font-medium text-muted">Status</label>
+          <Select name="status" defaultValue={searchParams.status || ""}>
+            <option value="">All statuses</option>
+            {Object.values(JobStatus).map((s) => <option key={s} value={s}>{s}</option>)}
+          </Select>
+        </div>
+        <button
+          type="submit"
+          className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand/90 transition-colors"
+        >
+          Apply
+        </button>
+        {(searchParams.q || searchParams.clientId || searchParams.status) && (
+          <a href="/jobs" className="h-10 flex items-center px-4 rounded-md border border-line bg-white text-sm text-muted hover:bg-canvas">
+            Clear
+          </a>
+        )}
+      </form>
+
+      {/* Full-width job table */}
+      <Panel title={`${jobs.length} jobs`}>
+        <JobTable jobs={jobs} />
+      </Panel>
+
+      {/* Manual import — collapsed at bottom, admin only */}
+      {user.role === Role.ADMIN && (
+        <details className="mt-6">
+          <summary className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-ink list-none">
+            <Upload size={15} className="text-muted" />
+            Manual import
+            <span className="text-xs font-normal text-muted ml-1">— click to expand</span>
+          </summary>
+          <Panel>
+            <form action="/api/jobs/import" method="post" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Client *</label>
+                <Select name="clientId" required>
+                  <option value="">Select client</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.clientName}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Job title *</label>
+                <TextInput name="title" placeholder="Senior Data Engineer" required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Company *</label>
+                <TextInput name="companyName" placeholder="Acme Corp" required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Location *</label>
+                <TextInput name="location" placeholder="Chicago, IL" required />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Apply URL</label>
+                <TextInput name="applyUrl" placeholder="https://..." />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Required skills</label>
+                <TextInput name="requiredSkills" placeholder="SQL, Python, GCP" />
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="mb-1 block text-xs font-medium text-muted">Job description *</label>
+                <TextArea name="description" placeholder="Paste the job description here…" required />
+              </div>
+              <div>
+                <button
+                  type="submit"
+                  className="h-10 rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand/90"
+                >
+                  Import job
+                </button>
+              </div>
+            </form>
+          </Panel>
+        </details>
+      )}
     </AppShell>
   );
 }
