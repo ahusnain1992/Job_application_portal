@@ -43,10 +43,10 @@ ATS keywords that MUST appear in the resume: ${jobKeywords}
 Keywords already in the resume (emphasise these): ${input.coveredKeywords.slice(0, 10).join(", ")}
 
 ## Job description
-${input.jobDescription.slice(0, 2500)}
+${input.jobDescription.slice(0, 1800)}
 
-## Original resume
-${input.cvText.slice(0, 4500)}
+## Original resume (REPRODUCE EVERY COMPANY AND ROLE — do not omit any)
+${input.cvText.slice(0, 6000)}
 
 ## STRICT RULES — follow every one or the output is wrong:
 
@@ -58,7 +58,7 @@ ${input.cvText.slice(0, 4500)}
 5. **Strengthen every bullet** with a strong action verb (Led, Architected, Delivered, Optimised, Automated, Deployed, Reduced, Increased) and a quantified result where plausible.
 6. **Update the Skills section** to list ALL keywords from the job description that the candidate has any exposure to, grouped by category (Cloud, Languages, Databases, Tools, etc.).
 7. **Rewrite the Summary/Profile** to directly mirror the job title and top 5 required skills.
-8. Keep all sections, all jobs, all dates, all companies, all education — nothing removed.
+8. **Keep every single company and role** — if the original resume has 5 jobs at 5 companies, the output MUST have all 5 jobs at all 5 companies. Count them before and after. If the count differs, you have made an error. Never drop a company because of space or relevance.
 
 ### Job title adjustment rule (IMPORTANT)
 For each position in the Experience section, you MAY adjust the candidate's job title to a closer synonym of the target role — but ONLY when the two roles are in the same professional discipline:

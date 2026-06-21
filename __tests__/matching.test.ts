@@ -8,6 +8,8 @@ const baseClient = {
   mainSkills: ["SQL", "Python", "GCP", "BigQuery", "Airflow"],
   secondarySkills: ["Tableau", "Power BI", "dbt"],
   preferredLocations: ["Remote", "Chicago, IL"],
+  preferredCountries: ["USA"],
+  preferredCities: ["Chicago"],
   workModePreference: WorkMode.REMOTE,
   employmentTypePreference: EmploymentType.FULL_TIME,
   minimumSalary: 145000,
