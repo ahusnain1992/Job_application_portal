@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Role } from "@prisma/client";
 import { AppShell } from "@/components/shell";
 import { Badge, PageHeader, Panel, Select, SubmitButton, TextArea, TextInput } from "@/components/ui";
+import { TagInput } from "@/components/tag-input";
+import { FileUploadOrUrl } from "@/components/file-upload-or-url";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -33,30 +35,60 @@ export default async function ClientsPage({ searchParams }: { searchParams: { er
         {/* Create form */}
         <Panel title="Add client">
           <form action="/api/clients" method="post" className="space-y-4">
+
             <div>
               <label className="block text-sm font-medium text-ink">Client full name *</label>
               <TextInput name="clientName" placeholder="e.g. Nadia Rahman" required className="mt-1" />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-ink">Current job title *</label>
               <TextInput name="currentJobTitle" placeholder="e.g. Senior Data Engineer" required className="mt-1" />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-ink">Target job titles * <span className="text-muted font-normal">(comma separated, 3–4 titles)</span></label>
-              <TextInput name="targetJobTitles" placeholder="Senior Data Engineer, GCP Data Engineer, Analytics Engineer" required className="mt-1" />
+              <label className="block text-sm font-medium text-ink mb-1">
+                Target job titles * <span className="text-muted font-normal">(3–4 titles)</span>
+              </label>
+              <TagInput
+                name="targetJobTitles"
+                placeholder="e.g. Senior Data Engineer — press Enter"
+                required
+              />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-ink">Alternative titles <span className="text-muted font-normal">(comma separated)</span></label>
-              <TextInput name="alternativeJobTitles" placeholder="ETL Developer, BI Engineer, Data Warehouse Engineer" className="mt-1" />
+              <label className="block text-sm font-medium text-ink mb-1">
+                Alternative titles <span className="text-muted font-normal">(optional)</span>
+              </label>
+              <TagInput
+                name="alternativeJobTitles"
+                placeholder="e.g. ETL Developer, BI Engineer"
+              />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-ink">Main skills * <span className="text-muted font-normal">(comma separated)</span></label>
-              <TextInput name="mainSkills" placeholder="SQL, Python, GCP, BigQuery, Airflow" required className="mt-1" />
+              <label className="block text-sm font-medium text-ink mb-1">
+                Main skills * <span className="text-muted font-normal">(used for job matching)</span>
+              </label>
+              <TagInput
+                name="mainSkills"
+                placeholder="e.g. SQL, Python, BigQuery"
+                required
+              />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-ink">Preferred locations * <span className="text-muted font-normal">(comma separated)</span></label>
-              <TextInput name="preferredLocations" placeholder="Remote, Chicago IL, Dallas TX" required className="mt-1" />
+              <label className="block text-sm font-medium text-ink mb-1">
+                Preferred locations *
+              </label>
+              <TagInput
+                name="preferredLocations"
+                placeholder="e.g. Remote, Chicago IL"
+                required
+              />
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-ink">Work mode</label>
@@ -78,6 +110,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { er
                 </Select>
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-ink">Min salary ($)</label>
@@ -88,22 +121,57 @@ export default async function ClientsPage({ searchParams }: { searchParams: { er
                 <TextInput name="maximumSalary" type="number" placeholder="180000" className="mt-1" />
               </div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-ink">Exclude keywords <span className="text-muted font-normal">(comma separated — skip jobs containing these)</span></label>
-              <TextInput name="keywordsExclude" placeholder="clearance, onsite only, visa sponsorship" className="mt-1" />
+              <label className="block text-sm font-medium text-ink mb-1">
+                Exclude keywords <span className="text-muted font-normal">(skip jobs containing these)</span>
+              </label>
+              <TagInput
+                name="keywordsExclude"
+                placeholder="e.g. security clearance, onsite only"
+              />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-ink">LinkedIn URL</label>
               <TextInput name="linkedinUrl" placeholder="https://linkedin.com/in/..." className="mt-1" />
             </div>
+
+            {/* Resume — upload file or paste URL */}
             <div>
-              <label className="block text-sm font-medium text-ink">CV text <span className="text-muted font-normal">(paste resume content for AI matching)</span></label>
-              <TextArea name="cvText" placeholder="Paste the client's CV / resume text here..." className="mt-1 min-h-32" />
+              <label className="block text-sm font-medium text-ink mb-1">
+                Resume file <span className="text-muted font-normal">(upload PDF or paste a link)</span>
+              </label>
+              <FileUploadOrUrl
+                name="resumeUrl"
+                placeholder="https://drive.google.com/..."
+                accept=".pdf,.doc,.docx"
+              />
             </div>
+
+            {/* CV text for AI keyword matching */}
             <div>
-              <label className="block text-sm font-medium text-ink">Notes for your team <span className="text-muted font-normal">(instructions shown to resources)</span></label>
-              <TextArea name="applicationNotes" placeholder="e.g. Prioritize company career pages. Avoid roles requiring security clearance." className="mt-1" />
+              <label className="block text-sm font-medium text-ink">
+                CV text <span className="text-muted font-normal">(paste resume text — used for AI job matching)</span>
+              </label>
+              <TextArea
+                name="cvText"
+                placeholder="Paste the client's full resume text here. This is used to match keywords against job descriptions."
+                className="mt-1 min-h-32"
+              />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-ink">
+                Notes for your team <span className="text-muted font-normal">(shown to resources on every job)</span>
+              </label>
+              <TextArea
+                name="applicationNotes"
+                placeholder="e.g. Prioritize company career pages. Avoid roles requiring security clearance."
+                className="mt-1"
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-ink">Assign resource</label>
               <Select name="teamMemberId" className="mt-1">
@@ -111,6 +179,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { er
                 {teamMembers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
               </Select>
             </div>
+
             <SubmitButton>Create client profile</SubmitButton>
           </form>
         </Panel>

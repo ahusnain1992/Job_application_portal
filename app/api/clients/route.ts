@@ -5,6 +5,12 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirectTo } from "@/lib/redirect";
 
+// Accepts https:// URLs or data: base64 uploads from FileUploadOrUrl component
+const urlOrDataUrl = z.string().max(10_000_000).refine(
+  (v) => v === "" || v.startsWith("data:") || v.startsWith("http://") || v.startsWith("https://"),
+  { message: "Must be a URL or uploaded file" }
+).optional().nullable().or(z.literal(""));
+
 const ClientCreateSchema = z.object({
   clientName: z.string().min(1).max(200),
   currentJobTitle: z.string().min(1).max(200),
@@ -18,6 +24,7 @@ const ClientCreateSchema = z.object({
   minimumSalary: z.coerce.number().int().min(0).max(10_000_000).optional().nullable(),
   maximumSalary: z.coerce.number().int().min(0).max(10_000_000).optional().nullable(),
   cvText: z.string().max(50000).optional().nullable(),
+  resumeUrl: urlOrDataUrl,
   linkedinUrl: z.string().url().max(2000).optional().nullable().or(z.literal("")),
   applicationNotes: z.string().max(5000).optional().nullable(),
   keywordsInclude: z.string().max(2000).optional(),
@@ -30,7 +37,7 @@ const ClientCreateSchema = z.object({
 const ResumeCreateSchema = z.object({
   clientId: z.string().cuid(),
   resumeName: z.string().min(1).max(200),
-  fileUrl: z.string().url().max(2000).optional().nullable().or(z.literal("")),
+  fileUrl: urlOrDataUrl,
   rewriteToolUrl: z.string().url().max(2000).optional().nullable().or(z.literal(""))
 });
 
@@ -91,6 +98,7 @@ export async function POST(request: NextRequest) {
     minimumSalary: form.get("minimumSalary") || null,
     maximumSalary: form.get("maximumSalary") || null,
     cvText: form.get("cvText") || null,
+    resumeUrl: form.get("resumeUrl") || "",
     linkedinUrl: form.get("linkedinUrl") || "",
     applicationNotes: form.get("applicationNotes") || null,
     keywordsInclude: form.get("keywordsInclude") || "",
@@ -130,6 +138,7 @@ export async function POST(request: NextRequest) {
       minimumSalary: data.minimumSalary || null,
       maximumSalary: data.maximumSalary || null,
       cvText: data.cvText || null,
+      resumeUrl: data.resumeUrl || null,
       linkedinUrl: data.linkedinUrl || null,
       applicationNotes: data.applicationNotes || null,
       keywordsInclude: list(data.keywordsInclude),
