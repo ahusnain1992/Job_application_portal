@@ -52,7 +52,7 @@ export default async function ClientDetailPage({
   const interviews = client.applications.filter((a) => a.status === JobStatus.INTERVIEW_RECEIVED).length;
   const pendingStatuses: string[] = ["NEW", "SUGGESTED", "APPROVED", "ASSIGNED"];
   const pending = client.applications.filter((a) => pendingStatuses.includes(a.status)).length;
-  const flagged = client.applications.filter((a) => (a as any).flaggedFast && !(a as any).verifiedByGmail).length;
+  const flagged = client.applications.filter((a) => (a as any).flaggedFast && !(a as any).verifiedByGmail && !(a as any).flagDismissed).length;
   const gmailVerified = client.applications.filter((a) => (a as any).verifiedByGmail).length;
 
   // Per-resource breakdown for this client
