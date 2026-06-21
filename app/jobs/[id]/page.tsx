@@ -319,7 +319,7 @@ export default async function JobDetailPage({
                   clientId={job.clientId}
                   currentStatus={app?.status || job.status}
                   resumes={job.client.resumes}
-                  defaultResumeId={app?.resumeId}
+                  defaultResumeId={app?.resumeId ?? job.bestResumeId ?? undefined}
                   defaultNotes={app?.notes}
                   defaultConfirmation={app?.confirmationNumber}
                   defaultProof={app?.proofUrl}

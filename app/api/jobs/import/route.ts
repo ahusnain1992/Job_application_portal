@@ -39,7 +39,10 @@ export async function POST(request: NextRequest) {
     return redirectTo("/jobs?error=unauthorized");
   }
 
-  const client = await prisma.clientProfile.findUnique({ where: { id: clientId } });
+  const client = await prisma.clientProfile.findUnique({
+    where: { id: clientId },
+    include: { resumes: { where: { active: true }, select: { id: true, name: true, resumeText: true } } }
+  });
   if (!client) return redirectTo("/jobs?error=client");
 
   const source = await prisma.jobSource.upsert({
@@ -66,15 +69,36 @@ export async function POST(request: NextRequest) {
 
   const match = scoreJobForClient(jobInput, client);
 
-  const resumeAnalysis = client.cvText
-    ? analyzeResumeJobFit(
-        client.cvText,
+  // Multi-resume matching: pick the best resume version for this job
+  const resumeCandidates = client.resumes.filter((r) => r.resumeText?.trim());
+  let bestResume: { id: string; name: string } | null = null;
+  let resumeAnalysis = null;
+
+  if (resumeCandidates.length > 0) {
+    let bestScore = -1;
+    for (const resume of resumeCandidates) {
+      const analysis = analyzeResumeJobFit(
+        resume.resumeText!,
         jobInput.description,
         jobInput.requiredSkills,
         jobInput.title,
         client.currentJobTitle
-      )
-    : null;
+      );
+      if (analysis.coverageScore > bestScore) {
+        bestScore = analysis.coverageScore;
+        resumeAnalysis = analysis;
+        bestResume = { id: resume.id, name: resume.name };
+      }
+    }
+  } else if (client.cvText) {
+    resumeAnalysis = analyzeResumeJobFit(
+      client.cvText,
+      jobInput.description,
+      jobInput.requiredSkills,
+      jobInput.title,
+      client.currentJobTitle
+    );
+  }
 
   const signature = duplicateSignature(jobInput);
   const duplicateGroup = await prisma.duplicateGroup.upsert({
@@ -98,7 +122,9 @@ export async function POST(request: NextRequest) {
       resumeCoverageScore: resumeAnalysis?.coverageScore ?? null,
       missingKeywords: resumeAnalysis?.missingKeywords ?? [],
       coveredKeywords: resumeAnalysis?.coveredKeywords ?? [],
-      resumeClusterId: resumeAnalysis?.clusterId ?? null
+      resumeClusterId: resumeAnalysis?.clusterId ?? null,
+      bestResumeId: bestResume?.id ?? null,
+      bestResumeName: bestResume?.name ?? null,
     }
   });
 

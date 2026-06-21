@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { JobStatus, Role } from "@prisma/client";
 import { Mail, CheckCircle, Pencil, Archive, RotateCcw } from "lucide-react";
 import { ArchiveClientButton } from "@/components/archive-client-button";
+import { DeleteClientButton } from "@/components/delete-client-button";
 import { AppShell } from "@/components/shell";
 import { JobTable } from "@/components/job-table";
 import { ClientRefreshButton } from "@/components/client-refresh-button";
@@ -101,6 +102,9 @@ export default async function ClientDetailPage({
                 <Pencil size={12} /> Edit profile
               </Link>
               <ArchiveClientButton clientId={client.id} clientName={client.clientName} currentStatus={client.status} />
+              {client.status === "INACTIVE" && (
+                <DeleteClientButton clientId={client.id} clientName={client.clientName} />
+              )}
               {client.gmailEmail ? (
                 <div className="inline-flex items-center gap-1 rounded-md border border-brand/30 bg-[#ECF7F4] px-3 py-1.5 text-xs font-semibold text-[#186A5E]">
                   <CheckCircle size={12} /> {client.gmailEmail}
@@ -259,19 +263,34 @@ export default async function ClientDetailPage({
           </Panel>
 
           {/* Resume versions */}
-          <Panel title="Resume versions">
+          <Panel title={`Resume versions (${client.resumes.length})`}>
             <div className="space-y-2">
-              {client.resumes.map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-md border border-line p-3">
-                  <div className="text-sm font-medium">{r.name}</div>
-                  {r.fileUrl ? (
-                    <a href={r.fileUrl} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline">View</a>
-                  ) : null}
-                </div>
-              ))}
               {client.resumes.length === 0 ? (
                 <div className="text-sm text-muted">No resume versions yet.</div>
-              ) : null}
+              ) : client.resumes.map((r) => {
+                const hasText = !!r.resumeText?.trim();
+                return (
+                  <div key={r.id} className={`flex items-center justify-between rounded-md border p-3 ${hasText ? "border-brand/20 bg-[#F0FAF7]" : "border-warn/30 bg-[#FFF6EB]"}`}>
+                    <div>
+                      <div className="text-sm font-semibold text-ink">{r.name}</div>
+                      {hasText ? (
+                        <div className="flex items-center gap-1 mt-0.5 text-xs text-[#186A5E]">
+                          <CheckCircle size={10} /> ATS ready — used for matching
+                        </div>
+                      ) : (
+                        <div className="text-xs text-[#8A4604] mt-0.5">Text missing — not used for matching</div>
+                      )}
+                    </div>
+                    {r.fileUrl ? (
+                      r.fileUrl.startsWith("data:") ? (
+                        <a href={r.fileUrl} download={`${r.name}.pdf`} className="text-xs text-brand hover:underline shrink-0">Download</a>
+                      ) : (
+                        <a href={r.fileUrl} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline shrink-0">Open file</a>
+                      )
+                    ) : <span className="text-xs text-muted shrink-0">No file</span>}
+                  </div>
+                );
+              })}
             </div>
             <div className="mt-3">
               <Link href="/resumes" className="text-xs text-brand hover:underline">Manage resume versions →</Link>
