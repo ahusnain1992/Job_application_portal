@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JobStatus, Role } from "@prisma/client";
-import { Mail, CheckCircle, Pencil } from "lucide-react";
+import { Mail, CheckCircle, Pencil, Archive, RotateCcw } from "lucide-react";
+import { ArchiveClientButton } from "@/components/archive-client-button";
 import { AppShell } from "@/components/shell";
 import { JobTable } from "@/components/job-table";
 import { ClientRefreshButton } from "@/components/client-refresh-button";
@@ -99,6 +100,7 @@ export default async function ClientDetailPage({
               <Link href={`/clients/${client.id}/edit`} className="focus-ring inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:bg-canvas">
                 <Pencil size={12} /> Edit profile
               </Link>
+              <ArchiveClientButton clientId={client.id} clientName={client.clientName} currentStatus={client.status} />
               {client.gmailEmail ? (
                 <div className="inline-flex items-center gap-1 rounded-md border border-brand/30 bg-[#ECF7F4] px-3 py-1.5 text-xs font-semibold text-[#186A5E]">
                   <CheckCircle size={12} /> {client.gmailEmail}
