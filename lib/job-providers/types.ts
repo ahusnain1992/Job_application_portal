@@ -24,6 +24,7 @@ export type NormalizedJob = {
 export type JobProviderSearch = {
   titles: string[];
   locations: string[];
+  countries: string[];   // e.g. ["USA", "United Kingdom"] — used to pick the right API endpoint
   remoteOnly?: boolean;
   postedWithinDays?: number;
   includeKeywords?: string[];

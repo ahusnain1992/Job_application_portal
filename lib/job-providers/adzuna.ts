@@ -16,8 +16,12 @@ export class AdzunaJobProvider implements JobProvider {
   async fetchJobs(search: JobProviderSearch): Promise<NormalizedJob[]> {
     const results: NormalizedJob[] = [];
 
+    // Resolve Adzuna country code from the client's preferred countries.
+    // Falls back to constructor default (us) if not recognised.
+    const countryCode = resolveAdzunaCountry(search.countries) || this.country;
+
     for (const title of search.titles.slice(0, 3)) {
-      for (const location of search.locations.slice(0, 2)) {
+      for (const location of (search.locations.length ? search.locations : [""]).slice(0, 2)) {
         try {
           const params = new URLSearchParams({
             app_id: this.appId,
@@ -35,7 +39,7 @@ export class AdzunaJobProvider implements JobProvider {
           }
 
           const res = await fetch(
-            `https://api.adzuna.com/v1/api/jobs/${this.country}/search/1?${params}`,
+            `https://api.adzuna.com/v1/api/jobs/${countryCode}/search/1?${params}`,
             { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15000) }
           );
 
@@ -109,4 +113,31 @@ function inferEmployment(value?: string): EmploymentType {
   if (v.includes("part")) return EmploymentType.PART_TIME;
   if (v.includes("intern")) return EmploymentType.INTERNSHIP;
   return EmploymentType.FULL_TIME;
+}
+
+// Maps common country names → Adzuna 2-letter country codes
+// Full list: https://api.adzuna.com/v1/api/jobs/{country_code}/search/
+const ADZUNA_COUNTRY_MAP: Record<string, string> = {
+  "usa": "us", "united states": "us", "us": "us", "america": "us",
+  "uk": "gb", "united kingdom": "gb", "england": "gb", "britain": "gb", "gb": "gb",
+  "canada": "ca", "ca": "ca",
+  "australia": "au", "au": "au",
+  "germany": "de", "deutschland": "de", "de": "de",
+  "france": "fr", "fr": "fr",
+  "netherlands": "nl", "nl": "nl", "holland": "nl",
+  "india": "in", "in": "in",
+  "singapore": "sg", "sg": "sg",
+  "new zealand": "nz", "nz": "nz",
+  "south africa": "za", "za": "za",
+  "brazil": "br", "br": "br",
+  "russia": "ru", "ru": "ru",
+  "poland": "pl", "pl": "pl",
+};
+
+export function resolveAdzunaCountry(countries: string[]): string | null {
+  for (const c of countries) {
+    const code = ADZUNA_COUNTRY_MAP[c.toLowerCase().trim()];
+    if (code) return code;
+  }
+  return null;
 }

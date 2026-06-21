@@ -4,6 +4,7 @@ import { JobStatus, Role } from "@prisma/client";
 import { Mail, CheckCircle, Pencil } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { JobTable } from "@/components/job-table";
+import { ClientRefreshButton } from "@/components/client-refresh-button";
 import { Badge, MetricCard, PageHeader, Panel } from "@/components/ui";
 import { requireUser, requireClientAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -94,6 +95,7 @@ export default async function ClientDetailPage({
           isAdmin ? (
             <div className="flex items-center gap-2">
               <Badge tone={client.status === "ACTIVE" ? "brand" : "neutral"}>{client.status}</Badge>
+              <ClientRefreshButton clientId={client.id} clientName={client.clientName} />
               <Link href={`/clients/${client.id}/edit`} className="focus-ring inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:bg-canvas">
                 <Pencil size={12} /> Edit profile
               </Link>

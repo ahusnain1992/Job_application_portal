@@ -84,11 +84,28 @@ export default async function EditClientPage({
                 />
               </label>
               <label className="block text-sm font-medium text-ink">
-                Preferred locations <span className="font-normal text-muted">(comma or line separated)</span>
+                Countries looking for jobs in <span className="font-normal text-muted">(comma separated)</span>
+                <TextArea
+                  name="preferredCountries"
+                  defaultValue={join(client.preferredCountries)}
+                  className="mt-1"
+                  placeholder="USA, Canada"
+                />
+              </label>
+              <label className="block text-sm font-medium text-ink">
+                Preferred cities <span className="font-normal text-muted">(comma separated — used to search & filter jobs)</span>
+                <TextArea
+                  name="preferredCities"
+                  defaultValue={join(client.preferredCities)}
+                  className="mt-1"
+                  placeholder="Chicago, New York, Dallas"
+                />
+              </label>
+              <label className="block text-sm font-medium text-ink">
+                Preferred locations <span className="font-normal text-muted">(legacy — kept for reference)</span>
                 <TextArea
                   name="preferredLocations"
                   defaultValue={join(client.preferredLocations)}
-                  required
                   className="mt-1"
                   placeholder="Remote, Chicago, IL, Dallas, TX"
                 />

@@ -91,6 +91,8 @@ model ClientProfile {
   mainSkills               String[]
   secondarySkills          String[]
   preferredLocations       String[]
+  preferredCountries       String[]
+  preferredCities          String[]
   workModePreference       WorkMode           @default(FLEXIBLE)
   employmentTypePreference EmploymentType     @default(UNKNOWN)
   minimumSalary            Int?
