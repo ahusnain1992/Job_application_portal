@@ -33,14 +33,17 @@ export class LinkedInJobProvider implements JobProvider {
 
     for (const title of search.titles.slice(0, 2)) {
       try {
+        const locationPart = search.locations?.[0] || search.countries?.[0] || "United States";
+        const searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}&location=${encodeURIComponent(locationPart)}&f_LF=f_AL&position=1&pageNum=0`;
         const input: Record<string, unknown> = {
-          keywords: title,
-          location: search.locations?.[0] || "",
-          resultsLimit: 25
+          searchUrl,
+          resultsLimit: 25,
+          proxy: { useApifyProxy: true }
         };
 
+        console.log(`[linkedin] Fetching: ${searchUrl}`);
         const res = await fetch(
-          `https://api.apify.com/v2/acts/bebity~linkedin-jobs-scraper/run-sync-get-dataset-items?token=${this.token}`,
+          `https://api.apify.com/v2/acts/bebity~linkedin-jobs-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=90`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -48,7 +51,10 @@ export class LinkedInJobProvider implements JobProvider {
             signal: AbortSignal.timeout(120000)
           }
         );
-        if (!res.ok) continue;
+        if (!res.ok) {
+          console.error(`[linkedin] Apify returned ${res.status}: ${await res.text()}`);
+          continue;
+        }
 
         const items = (await res.json()) as LinkedInItem[];
 

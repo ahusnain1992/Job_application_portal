@@ -8,8 +8,9 @@ import { TheMuseJobProvider } from "./themuse";
 import { HimalayasJobProvider } from "./himalayas";
 import { USAJobsProvider } from "./usajobs";
 import { FindWorkJobProvider } from "./findwork";
-import { ApifyJobProvider } from "./apify";
 import { LinkedInJobProvider } from "./linkedin";
+import { IndeedJobProvider } from "./indeed";
+import { GlassdoorJobProvider } from "./glassdoor";
 import type { JobProvider } from "./types";
 
 export function buildProviders(): JobProvider[] {
@@ -36,8 +37,8 @@ export function buildProviders(): JobProvider[] {
   const apifyToken = process.env.APIFY_API_TOKEN;
   if (apifyToken) {
     providers.push(new LinkedInJobProvider(apifyToken));
-    providers.push(new ApifyJobProvider({ name: "Indeed", actorId: "misceres/indeed-scraper", token: apifyToken }));
-    providers.push(new ApifyJobProvider({ name: "Glassdoor", actorId: "bebity/glassdoor-jobs-scraper", token: apifyToken }));
+    providers.push(new IndeedJobProvider(apifyToken));
+    providers.push(new GlassdoorJobProvider(apifyToken));
   }
 
   return providers;

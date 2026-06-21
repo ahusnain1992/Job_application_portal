@@ -51,11 +51,15 @@ export async function fetchJobsForClient(client: ClientWithResumes): Promise<Fet
   const allJobs: NormalizedJob[] = [];
   for (const provider of providers) {
     try {
+      console.log(`[fetch-jobs] Running provider: ${provider.name}`);
       const jobs = await provider.fetchJobs(search);
+      console.log(`[fetch-jobs] ${provider.name} returned ${jobs.length} jobs`);
       allJobs.push(...jobs);
       summary.jobsFetched += jobs.length;
     } catch (err) {
-      summary.errors.push(`${provider.name}: ${String(err)}`);
+      const msg = `${provider.name}: ${String(err)}`;
+      console.error(`[fetch-jobs] Provider error — ${msg}`);
+      summary.errors.push(msg);
     }
   }
 
