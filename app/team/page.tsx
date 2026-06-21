@@ -63,9 +63,7 @@ export default async function TeamDashboard() {
         client: { select: { clientName: true } }
       }
     }) : Promise.resolve([] as { id: string; title: string; companyName: string; matchScore: number; location: string; resumeRecommendation: string | null; client: { clientName: string } }[]),
-    user.role !== Role.ADMIN
-      ? prisma.dailyTarget.findFirst({ where: { userId: user.id }, select: { target: true } })
-      : Promise.resolve(null)
+    prisma.dailyTarget.findFirst({ where: { userId: user.id }, select: { target: true } })
   ]);
 
   const dailyTargetNum = dailyTarget?.target ?? 30;
