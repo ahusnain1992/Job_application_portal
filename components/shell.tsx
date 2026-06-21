@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BriefcaseBusiness, ClipboardList, FileText, LayoutDashboard, LogOut, UserCog, Users, ListChecks, BookOpen } from "lucide-react";
+import { BriefcaseBusiness, ClipboardList, FileText, LayoutDashboard, LogOut, UserCog, Users, ListChecks, BookOpen, HelpCircle } from "lucide-react";
 import { Role } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { roleLabel } from "@/lib/format";
@@ -12,7 +12,8 @@ const adminLinks = [
   { href: "/applications", label: "Applications", icon: ClipboardList },
   { href: "/reports", label: "Reports", icon: BookOpen },
   { href: "/resumes/strategy", label: "Resume Strategy", icon: FileText },
-  { href: "/settings", label: "Settings & Users", icon: UserCog }
+  { href: "/settings", label: "Settings & Users", icon: UserCog },
+  { href: "/help", label: "Help & Guide", icon: HelpCircle }
 ];
 
 const teamLinks = [
@@ -20,7 +21,8 @@ const teamLinks = [
   { href: "/queue", label: "My Queue", icon: ListChecks },
   { href: "/jobs", label: "All Jobs", icon: BriefcaseBusiness },
   { href: "/applications", label: "My Applications", icon: ClipboardList },
-  { href: "/resumes", label: "Resumes", icon: FileText }
+  { href: "/resumes", label: "Resumes", icon: FileText },
+  { href: "/help", label: "How to Use", icon: HelpCircle }
 ];
 
 export async function AppShell({ children }: { children: React.ReactNode }) {

@@ -108,6 +108,31 @@ model ClientProfile {
   keywordsInclude          String[]
   keywordsExclude          String[]
   applicationNotes         String?
+  // Personal information for form filling
+  dateOfBirth              DateTime?
+  phone                    String?
+  personalEmail            String?
+  streetAddress            String?
+  addressCity              String?
+  addressState             String?
+  addressZip               String?
+  addressCountry           String?
+  githubUrl                String?
+  // Education
+  highestDegree            String?
+  fieldOfStudy             String?
+  university               String?
+  graduationYear           Int?
+  gpa                      String?
+  // Work preferences
+  noticePeriod             String?
+  availableFrom            DateTime?
+  languages                String[]
+  // EEO / voluntary disclosures
+  genderEeo                String?
+  ethnicityEeo             String?
+  veteranStatus            String?
+  disabilityStatus         String?
   gmailEmail               String?
   gmailAccessToken         String?
   gmailRefreshToken        String?

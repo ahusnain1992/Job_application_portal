@@ -37,7 +37,32 @@ export default async function JobDetailPage({
           applicationNotes: true,
           cvText: true,
           workAuthorizationNotes: true,
-          resumes: { where: { active: true }, select: { id: true, name: true, fileUrl: true, resumeText: true } }
+          sponsorshipRequirement: true,
+          resumes: { where: { active: true }, select: { id: true, name: true, fileUrl: true, resumeText: true } },
+          // Personal info for form filling
+          dateOfBirth: true,
+          phone: true,
+          personalEmail: true,
+          streetAddress: true,
+          addressCity: true,
+          addressState: true,
+          addressZip: true,
+          addressCountry: true,
+          linkedinUrl: true,
+          githubUrl: true,
+          portfolioUrl: true,
+          highestDegree: true,
+          fieldOfStudy: true,
+          university: true,
+          graduationYear: true,
+          gpa: true,
+          noticePeriod: true,
+          availableFrom: true,
+          languages: true,
+          genderEeo: true,
+          ethnicityEeo: true,
+          veteranStatus: true,
+          disabilityStatus: true,
         }
       },
       applications: {
@@ -366,6 +391,9 @@ export default async function JobDetailPage({
             </Panel>
           )}
 
+          {/* Client form-filling info */}
+          <ClientInfoPanel client={job.client} />
+
           {/* Duplicate group */}
           {job.duplicateGroup && job.duplicateGroup.jobs.filter((d) => d.id !== job.id).length > 0 && (
             <Panel title="Same job — other sources">
@@ -587,5 +615,145 @@ function BestResumePanel({ job }: {
         </div>
       )}
     </Panel>
+  );
+}
+
+type ClientForInfo = {
+  clientName: string;
+  dateOfBirth?: Date | null;
+  phone?: string | null;
+  personalEmail?: string | null;
+  streetAddress?: string | null;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressZip?: string | null;
+  addressCountry?: string | null;
+  linkedinUrl?: string | null;
+  githubUrl?: string | null;
+  portfolioUrl?: string | null;
+  highestDegree?: string | null;
+  fieldOfStudy?: string | null;
+  university?: string | null;
+  graduationYear?: number | null;
+  gpa?: string | null;
+  noticePeriod?: string | null;
+  availableFrom?: Date | null;
+  languages?: string[];
+  workAuthorizationNotes?: string | null;
+  sponsorshipRequirement?: string | null;
+  genderEeo?: string | null;
+  ethnicityEeo?: string | null;
+  veteranStatus?: string | null;
+  disabilityStatus?: string | null;
+};
+
+function ClientInfoPanel({ client }: { client: ClientForInfo }) {
+  const hasPersonal = !!(client.dateOfBirth || client.phone || client.personalEmail || client.streetAddress);
+  const hasEducation = !!(client.highestDegree || client.university || client.graduationYear);
+  const hasOnline = !!(client.linkedinUrl || client.githubUrl || client.portfolioUrl);
+  const hasEeo = !!(client.genderEeo || client.ethnicityEeo || client.veteranStatus || client.disabilityStatus);
+  const hasAny = hasPersonal || hasEducation || hasOnline || hasEeo || !!(client.noticePeriod || client.workAuthorizationNotes || client.sponsorshipRequirement);
+
+  if (!hasAny) return null;
+
+  const formatDate = (d: Date | null | undefined) => {
+    if (!d) return null;
+    return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  };
+
+  const address = [client.streetAddress, client.addressCity, client.addressState, client.addressZip, client.addressCountry]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    <Panel title="Client info — for the application form">
+      <details open>
+        <summary className="cursor-pointer list-none flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted">Copy details below into the form</span>
+          <span className="text-brand text-xs">click to collapse</span>
+        </summary>
+        <div className="space-y-4">
+          {hasPersonal && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Personal</div>
+              <dl className="space-y-1.5">
+                {client.dateOfBirth && <InfoRow label="Date of birth" value={formatDate(client.dateOfBirth)!} />}
+                {client.phone && <InfoRow label="Phone" value={client.phone} />}
+                {client.personalEmail && <InfoRow label="Email" value={client.personalEmail} />}
+                {address && <InfoRow label="Address" value={address} />}
+                {client.languages && client.languages.length > 0 && (
+                  <InfoRow label="Languages" value={client.languages.join(", ")} />
+                )}
+              </dl>
+            </div>
+          )}
+
+          {hasOnline && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Online profiles</div>
+              <dl className="space-y-1.5">
+                {client.linkedinUrl && <InfoRow label="LinkedIn" value={client.linkedinUrl} isUrl />}
+                {client.githubUrl && <InfoRow label="GitHub" value={client.githubUrl} isUrl />}
+                {client.portfolioUrl && <InfoRow label="Portfolio" value={client.portfolioUrl} isUrl />}
+              </dl>
+            </div>
+          )}
+
+          {hasEducation && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Education</div>
+              <dl className="space-y-1.5">
+                {client.highestDegree && <InfoRow label="Degree" value={client.highestDegree} />}
+                {client.fieldOfStudy && <InfoRow label="Field of study" value={client.fieldOfStudy} />}
+                {client.university && <InfoRow label="University" value={client.university} />}
+                {client.graduationYear && <InfoRow label="Graduation year" value={String(client.graduationYear)} />}
+                {client.gpa && <InfoRow label="GPA" value={client.gpa} />}
+              </dl>
+            </div>
+          )}
+
+          {(client.noticePeriod || client.availableFrom || client.workAuthorizationNotes || client.sponsorshipRequirement) && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Availability & work auth</div>
+              <dl className="space-y-1.5">
+                {client.noticePeriod && <InfoRow label="Notice period" value={client.noticePeriod} />}
+                {client.availableFrom && <InfoRow label="Available from" value={formatDate(client.availableFrom)!} />}
+                {client.workAuthorizationNotes && <InfoRow label="Work auth" value={client.workAuthorizationNotes} />}
+                {client.sponsorshipRequirement && <InfoRow label="Sponsorship" value={client.sponsorshipRequirement} />}
+              </dl>
+            </div>
+          )}
+
+          {hasEeo && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">EEO / voluntary (only if asked)</div>
+              <dl className="space-y-1.5">
+                {client.genderEeo && <InfoRow label="Gender" value={client.genderEeo} />}
+                {client.ethnicityEeo && <InfoRow label="Ethnicity" value={client.ethnicityEeo} />}
+                {client.veteranStatus && <InfoRow label="Veteran status" value={client.veteranStatus} />}
+                {client.disabilityStatus && <InfoRow label="Disability" value={client.disabilityStatus} />}
+              </dl>
+            </div>
+          )}
+        </div>
+      </details>
+    </Panel>
+  );
+}
+
+function InfoRow({ label, value, isUrl }: { label: string; value: string; isUrl?: boolean }) {
+  return (
+    <div className="flex gap-2 flex-wrap">
+      <dt className="w-28 shrink-0 text-xs text-muted">{label}</dt>
+      <dd className="flex-1 min-w-0">
+        {isUrl ? (
+          <a href={value} target="_blank" rel="noreferrer" className="text-xs text-brand hover:underline break-all">
+            {value}
+          </a>
+        ) : (
+          <span className="text-xs text-ink break-words">{value}</span>
+        )}
+      </dd>
+    </div>
   );
 }

@@ -33,7 +33,32 @@ const ClientCreateSchema = z.object({
   keywordsExclude: z.string().max(2000).optional(),
   industriesPreferred: z.string().max(1000).optional(),
   industriesToAvoid: z.string().max(1000).optional(),
-  teamMemberId: z.string().cuid().optional().nullable().or(z.literal(""))
+  teamMemberId: z.string().cuid().optional().nullable().or(z.literal("")),
+  // Personal info
+  dateOfBirth: z.string().optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  personalEmail: z.string().email().max(200).optional().nullable().or(z.literal("")),
+  streetAddress: z.string().max(300).optional().nullable(),
+  addressCity: z.string().max(100).optional().nullable(),
+  addressState: z.string().max(100).optional().nullable(),
+  addressZip: z.string().max(20).optional().nullable(),
+  addressCountry: z.string().max(100).optional().nullable(),
+  githubUrl: z.string().url().max(2000).optional().nullable().or(z.literal("")),
+  // Education
+  highestDegree: z.string().max(100).optional().nullable(),
+  fieldOfStudy: z.string().max(200).optional().nullable(),
+  university: z.string().max(200).optional().nullable(),
+  graduationYear: z.coerce.number().int().min(1950).max(2100).optional().nullable(),
+  gpa: z.string().max(20).optional().nullable(),
+  // Work preferences
+  noticePeriod: z.string().max(100).optional().nullable(),
+  availableFrom: z.string().optional().nullable(),
+  languages: z.string().max(500).optional(),
+  // EEO
+  genderEeo: z.string().max(100).optional().nullable(),
+  ethnicityEeo: z.string().max(200).optional().nullable(),
+  veteranStatus: z.string().max(100).optional().nullable(),
+  disabilityStatus: z.string().max(100).optional().nullable(),
 });
 
 const ResumeCreateSchema = z.object({
@@ -49,6 +74,12 @@ function list(value?: string | null) {
     .split(/[\n,]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function parseDate(value?: string | null): Date | null {
+  if (!value || String(value).trim() === "") return null;
+  const d = new Date(String(value));
+  return isNaN(d.getTime()) ? null : d;
 }
 
 export async function POST(request: NextRequest) {
@@ -112,7 +143,28 @@ export async function POST(request: NextRequest) {
     keywordsExclude: form.get("keywordsExclude") || "",
     industriesPreferred: form.get("industriesPreferred") || "",
     industriesToAvoid: form.get("industriesToAvoid") || "",
-    teamMemberId: form.get("teamMemberId") || ""
+    teamMemberId: form.get("teamMemberId") || "",
+    dateOfBirth: form.get("dateOfBirth") || null,
+    phone: form.get("phone") || null,
+    personalEmail: form.get("personalEmail") || null,
+    streetAddress: form.get("streetAddress") || null,
+    addressCity: form.get("addressCity") || null,
+    addressState: form.get("addressState") || null,
+    addressZip: form.get("addressZip") || null,
+    addressCountry: form.get("addressCountry") || null,
+    githubUrl: form.get("githubUrl") || "",
+    highestDegree: form.get("highestDegree") || null,
+    fieldOfStudy: form.get("fieldOfStudy") || null,
+    university: form.get("university") || null,
+    graduationYear: form.get("graduationYear") || null,
+    gpa: form.get("gpa") || null,
+    noticePeriod: form.get("noticePeriod") || null,
+    availableFrom: form.get("availableFrom") || null,
+    languages: form.get("languages") || "",
+    genderEeo: form.get("genderEeo") || null,
+    ethnicityEeo: form.get("ethnicityEeo") || null,
+    veteranStatus: form.get("veteranStatus") || null,
+    disabilityStatus: form.get("disabilityStatus") || null,
   });
 
   if (!parsed.success) {
@@ -153,7 +205,28 @@ export async function POST(request: NextRequest) {
       keywordsInclude: list(data.keywordsInclude),
       keywordsExclude: list(data.keywordsExclude),
       industriesPreferred: list(data.industriesPreferred),
-      industriesToAvoid: list(data.industriesToAvoid)
+      industriesToAvoid: list(data.industriesToAvoid),
+      dateOfBirth: parseDate(data.dateOfBirth),
+      phone: data.phone || null,
+      personalEmail: data.personalEmail || null,
+      streetAddress: data.streetAddress || null,
+      addressCity: data.addressCity || null,
+      addressState: data.addressState || null,
+      addressZip: data.addressZip || null,
+      addressCountry: data.addressCountry || null,
+      githubUrl: data.githubUrl || null,
+      highestDegree: data.highestDegree || null,
+      fieldOfStudy: data.fieldOfStudy || null,
+      university: data.university || null,
+      graduationYear: data.graduationYear || null,
+      gpa: data.gpa || null,
+      noticePeriod: data.noticePeriod || null,
+      availableFrom: parseDate(data.availableFrom),
+      languages: list(data.languages),
+      genderEeo: data.genderEeo || null,
+      ethnicityEeo: data.ethnicityEeo || null,
+      veteranStatus: data.veteranStatus || null,
+      disabilityStatus: data.disabilityStatus || null,
     }
   });
 
