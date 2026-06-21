@@ -14,6 +14,7 @@ import { HimalayasJobProvider } from "@/lib/job-providers/himalayas";
 import { USAJobsProvider } from "@/lib/job-providers/usajobs";
 import { FindWorkJobProvider } from "@/lib/job-providers/findwork";
 import { ApifyJobProvider } from "@/lib/job-providers/apify";
+import { LinkedInJobProvider } from "@/lib/job-providers/linkedin";
 import { NormalizedJob } from "@/lib/job-providers/types";
 import { duplicateSignature } from "@/lib/services/duplicates";
 import { scoreJobForClient } from "@/lib/services/matching";
@@ -250,12 +251,14 @@ function buildProviders() {
     providers.push(new FindWorkJobProvider()); // tech job board, free tier
   }
 
-  // Apify actors for LinkedIn, Indeed, Glassdoor (requires APIFY_API_TOKEN)
+  // Apify-backed providers (requires APIFY_API_TOKEN)
   const apifyToken = process.env.APIFY_API_TOKEN;
   if (apifyToken) {
-    providers.push(
-      new ApifyJobProvider({ name: "LinkedIn", actorId: "bebity/linkedin-jobs-scraper", token: apifyToken })
-    );
+    // LinkedIn: dedicated provider that filters out Easy Apply jobs
+    // Employees will always land on the company's own career portal
+    providers.push(new LinkedInJobProvider(apifyToken));
+
+    // Indeed and Glassdoor via generic Apify actors
     providers.push(
       new ApifyJobProvider({ name: "Indeed", actorId: "misceres/indeed-scraper", token: apifyToken })
     );
