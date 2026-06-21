@@ -30,22 +30,28 @@ export default async function TeamDashboard() {
     JobStatus.FOLLOW_UP_NEEDED,
   ];
 
+  const hasClients = assignedClientIds.length > 0;
+
   const [clients, pendingJobs, appliedToday, skippedToday, followUps, topJobs, dailyTarget] = await Promise.all([
-    prisma.clientProfile.findMany({
-      where: { id: { in: assignedClientIds } },
-      select: { id: true, clientName: true, targetJobTitles: true }
-    }),
-    prisma.job.count({
-      where: { clientId: { in: assignedClientIds }, status: { in: WORKABLE_STATUSES } }
-    }),
+    hasClients
+      ? prisma.clientProfile.findMany({
+          where: { id: { in: assignedClientIds } },
+          select: { id: true, clientName: true, targetJobTitles: true }
+        })
+      : Promise.resolve([] as { id: string; clientName: string; targetJobTitles: string[] }[]),
+    hasClients
+      ? prisma.job.count({ where: { clientId: { in: assignedClientIds }, status: { in: WORKABLE_STATUSES } } })
+      : Promise.resolve(0),
     prisma.application.count({
       where: { appliedById: user.id, status: JobStatus.APPLIED, appliedDateTime: { gte: today } }
     }),
     prisma.application.count({
-      where: { lastUpdatedById: user.id, status: JobStatus.SKIPPED, updatedAt: { gte: today } }
+      where: { appliedById: user.id, status: JobStatus.SKIPPED, updatedAt: { gte: today } }
     }),
-    prisma.job.count({ where: { clientId: { in: assignedClientIds }, status: JobStatus.FOLLOW_UP_NEEDED } }),
-    assignedClientIds.length > 0 ? prisma.job.findMany({
+    hasClients
+      ? prisma.job.count({ where: { clientId: { in: assignedClientIds }, status: JobStatus.FOLLOW_UP_NEEDED } })
+      : Promise.resolve(0),
+    hasClients ? prisma.job.findMany({
       where: {
         clientId: { in: assignedClientIds },
         status: { in: [JobStatus.SUGGESTED, JobStatus.APPROVED, JobStatus.ASSIGNED, JobStatus.NEW] },
@@ -63,7 +69,7 @@ export default async function TeamDashboard() {
         client: { select: { clientName: true } }
       }
     }) : Promise.resolve([] as { id: string; title: string; companyName: string; matchScore: number; location: string; resumeRecommendation: string | null; client: { clientName: string } }[]),
-    prisma.dailyTarget.findFirst({ where: { userId: user.id }, select: { target: true } })
+    prisma.dailyTarget.findFirst({ where: { userId: user.id }, select: { target: true } }).catch(() => null)
   ]);
 
   const dailyTargetNum = dailyTarget?.target ?? 30;
