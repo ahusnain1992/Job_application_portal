@@ -36,7 +36,7 @@ export default async function ApplicationsPage({
       ? undefined
       : (
           await prisma.clientAssignment.findMany({
-            where: { userId: user.id },
+            where: { userId: user.id, client: { status: "ACTIVE" } },
             select: { clientId: true }
           })
         ).map((a) => a.clientId);

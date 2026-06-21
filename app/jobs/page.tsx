@@ -8,8 +8,13 @@ import { prisma } from "@/lib/prisma";
 
 export default async function JobsPage({ searchParams }: { searchParams: { status?: JobStatus; q?: string; clientId?: string } }) {
   const user = await requireUser();
-  const assignedClientIds = user.role === Role.ADMIN ? undefined : (await prisma.clientAssignment.findMany({ where: { userId: user.id }, select: { clientId: true } })).map((item) => item.clientId);
-  const clients = await prisma.clientProfile.findMany({ where: assignedClientIds ? { id: { in: assignedClientIds } } : undefined, orderBy: { clientName: "asc" } });
+  const assignedClientIds = user.role === Role.ADMIN
+    ? undefined
+    : (await prisma.clientAssignment.findMany({ where: { userId: user.id, client: { status: "ACTIVE" } }, select: { clientId: true } })).map((item) => item.clientId);
+  const clients = await prisma.clientProfile.findMany({
+    where: assignedClientIds ? { id: { in: assignedClientIds }, status: "ACTIVE" } : { status: "ACTIVE" },
+    orderBy: { clientName: "asc" }
+  });
   const clientFilter = searchParams.clientId
     ? user.role === Role.ADMIN || assignedClientIds?.includes(searchParams.clientId)
       ? [searchParams.clientId]

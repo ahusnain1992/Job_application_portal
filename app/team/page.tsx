@@ -11,7 +11,10 @@ export default async function TeamDashboard() {
   today.setHours(0, 0, 0, 0);
 
   const assignedClientIds = (
-    await prisma.clientAssignment.findMany({ where: { userId: user.id }, select: { clientId: true } })
+    await prisma.clientAssignment.findMany({
+      where: { userId: user.id, client: { status: "ACTIVE" } },
+      select: { clientId: true }
+    })
   ).map((item) => item.clientId);
 
   const WORKABLE_STATUSES: JobStatus[] = [
