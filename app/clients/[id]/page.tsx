@@ -164,7 +164,14 @@ export default async function ClientDetailPage({
               {client.secondarySkills.length ? (
                 <div><strong>Secondary skills:</strong> {client.secondarySkills.join(", ")}</div>
               ) : null}
-              <div><strong>Locations:</strong> {client.preferredLocations.join(", ")}</div>
+              <div>
+                <strong>Locations:</strong>{" "}
+                {[
+                  ...(client.preferredCountries.length ? client.preferredCountries : []),
+                  ...(client.preferredCities.length ? client.preferredCities : []),
+                  ...(client.preferredLocations.includes("Remote") ? ["Remote"] : []),
+                ].join(", ") || client.preferredLocations.join(", ") || "—"}
+              </div>
               <div><strong>Work mode:</strong> {client.workModePreference}</div>
               <div><strong>Employment:</strong> {client.employmentTypePreference}</div>
               {(client.minimumSalary || client.maximumSalary) ? (

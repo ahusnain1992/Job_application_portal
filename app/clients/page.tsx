@@ -3,6 +3,7 @@ import { Role } from "@prisma/client";
 import { AppShell } from "@/components/shell";
 import { Badge, PageHeader, Panel, Select, SubmitButton, TextArea, TextInput } from "@/components/ui";
 import { TagInput } from "@/components/tag-input";
+import { LocationPicker } from "@/components/location-picker";
 import { FileUploadOrUrl } from "@/components/file-upload-or-url";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -79,14 +80,10 @@ export default async function ClientsPage({ searchParams }: { searchParams: { er
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-ink mb-1">
-                Preferred locations *
+              <label className="block text-sm font-medium text-ink mb-2">
+                Job locations
               </label>
-              <TagInput
-                name="preferredLocations"
-                placeholder="e.g. Remote, Chicago IL"
-                required
-              />
+              <LocationPicker />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
