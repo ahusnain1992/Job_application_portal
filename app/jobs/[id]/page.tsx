@@ -7,6 +7,7 @@ import { ApplyButton } from "@/components/apply-button";
 import { ActionForm } from "@/components/action-form";
 import { CoverLetterButton } from "@/components/cover-letter-button";
 import { ResumeHandoffButton } from "@/components/resume-handoff-button";
+import { ResumeRewriteButton } from "@/components/resume-rewrite-button";
 import { Badge, PageHeader, Panel } from "@/components/ui";
 import { money, relativeDate, shortDate, statusLabel, workModeLabel } from "@/lib/format";
 import { requireUser, requireClientAccess } from "@/lib/auth";
@@ -220,6 +221,14 @@ export default async function JobDetailPage({
 
           {/* Resume decision */}
           <ResumeRecommendationPanel job={job} />
+
+          {/* AI resume rewrite */}
+          <Panel title="AI Resume Rewrite">
+            <p className="mb-3 text-sm text-muted">
+              Claude rewrites the client&apos;s CV to better match this job — highlighting relevant experience, incorporating missing keywords, and strengthening phrasing. <strong>Always review before use.</strong>
+            </p>
+            <ResumeRewriteButton jobId={job.id} hasCvText={!!job.client.cvText?.trim()} />
+          </Panel>
 
           {/* Job details */}
           <Panel title="Job details">

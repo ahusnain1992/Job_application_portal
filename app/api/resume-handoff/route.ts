@@ -92,14 +92,18 @@ function buildPayload(job: {
 }
 
 function buildInstructions(recommendation: string | null, missing: string[]): string {
+  const missingText = missing.length ? missing.join(", ") : "the most important requirements from the job description";
+
   if (recommendation === "NEW_VERSION") {
-    return `Create a new resume version targeting this specific role. The existing resume has low coverage. Focus on incorporating these missing keywords naturally: ${missing.join(", ")}.`;
+    return `Create a new resume version targeting this specific role. The existing resume has low coverage. Focus on incorporating ${missingText} naturally.`;
   }
   if (recommendation === "FULL_REWRITE") {
-    return `Rewrite the resume to better match this job. Incorporate the following missing keywords and skills: ${missing.join(", ")}. Keep the candidate's authentic experience but reframe it to align with the job requirements.`;
+    return `Rewrite the resume to better match this job. Incorporate ${missingText}. Keep the candidate's authentic experience but reframe it to align with the job requirements.`;
   }
   if (recommendation === "MINOR_TAILORING") {
-    return `Make minor tailoring to the existing resume. Add or emphasize these keywords where relevant: ${missing.join(", ")}.`;
+    return `Make minor tailoring to the existing resume. Add or emphasize ${missingText} where relevant.`;
   }
-  return `Review the resume against the job description. Current coverage is good but you may want to add: ${missing.join(", ")}.`;
+  return missing.length
+    ? `Review the resume against the job description. Current coverage is good but you may want to add: ${missingText}.`
+    : "Review the resume against the job description. Current coverage is good; make only targeted improvements where the job description clearly calls for them.";
 }

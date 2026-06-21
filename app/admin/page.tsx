@@ -23,7 +23,7 @@ export default async function AdminDashboard() {
     jobsToday, appliedToday, appliedWeek,
     interviews, duplicates,
     resumeRewritesNeeded, missingProof, incompleteOpens,
-    topJobs, teamMembers, recentApplications, skipReasons
+    topJobs, teamMembers, recentApplications, skipReasons, lastSource
   ] = await Promise.all([
     prisma.clientProfile.count(),
     prisma.clientProfile.count({ where: { status: "ACTIVE" } }),
@@ -104,6 +104,13 @@ export default async function AdminDashboard() {
       where: { status: { in: [JobStatus.SKIPPED, JobStatus.NOT_RELEVANT] }, reasonSkipped: { not: null } },
       _count: { reasonSkipped: true },
       orderBy: { _count: { reasonSkipped: "desc" } }
+    }),
+
+    // Last job fetch time (for button cooldown)
+    prisma.jobSource.findFirst({
+      where: { lastRunAt: { not: null } },
+      orderBy: { lastRunAt: "desc" },
+      select: { lastRunAt: true }
     })
   ]);
 
@@ -163,7 +170,7 @@ export default async function AdminDashboard() {
       <PageHeader
         title="Admin dashboard"
         eyebrow="Operations overview"
-        actions={<FetchJobsButton />}
+        actions={<FetchJobsButton lastRunAt={lastSource?.lastRunAt?.toISOString() ?? null} />}
       />
 
       {/* Top-line metrics */}
