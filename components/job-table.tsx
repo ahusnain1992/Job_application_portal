@@ -23,6 +23,16 @@ type JobRow = {
   resumeCoverageScore?: number | null;
 };
 
+function buildDupSet(jobs: JobRow[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const j of jobs) {
+    if (j.duplicateGroupId) counts.set(j.duplicateGroupId, (counts.get(j.duplicateGroupId) ?? 0) + 1);
+  }
+  const set = new Set<string>();
+  counts.forEach((count, id) => { if (count > 1) set.add(id); });
+  return set;
+}
+
 const REC_BADGE: Record<string, { tone: "brand" | "signal" | "warn" | "danger" | "neutral"; short: string }> = {
   AS_IS:           { tone: "brand",   short: "✅ As-is" },
   MINOR_TAILORING: { tone: "signal",  short: "✏️ Tailor" },
@@ -31,6 +41,7 @@ const REC_BADGE: Record<string, { tone: "brand" | "signal" | "warn" | "danger" |
 };
 
 export function JobTable({ jobs }: { jobs: JobRow[] }) {
+  const dupSet = buildDupSet(jobs);
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[980px] border-collapse text-left text-sm">
@@ -59,9 +70,9 @@ export function JobTable({ jobs }: { jobs: JobRow[] }) {
                     {job.companyName} · {job.location} · {workModeLabel(job.workMode)}
                   </div>
                   <div className="mt-1 text-muted">{money(job.salaryMin, job.salaryMax)}</div>
-                  {job.duplicateGroupId ? (
+                  {job.duplicateGroupId && dupSet.has(job.duplicateGroupId) ? (
                     <div className="mt-2">
-                      <Badge tone="warn">Duplicate group</Badge>
+                      <Badge tone="warn">Seen across clients</Badge>
                     </div>
                   ) : null}
                 </td>

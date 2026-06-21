@@ -11,6 +11,9 @@ import { ArbeitnowJobProvider } from "@/lib/job-providers/arbeitnow";
 import { JobicyJobProvider } from "@/lib/job-providers/jobicy";
 import { TheMuseJobProvider } from "@/lib/job-providers/themuse";
 import { HimalayasJobProvider } from "@/lib/job-providers/himalayas";
+import { USAJobsProvider } from "@/lib/job-providers/usajobs";
+import { FindWorkJobProvider } from "@/lib/job-providers/findwork";
+import { ApifyJobProvider } from "@/lib/job-providers/apify";
 import { NormalizedJob } from "@/lib/job-providers/types";
 import { duplicateSignature } from "@/lib/services/duplicates";
 import { scoreJobForClient } from "@/lib/services/matching";
@@ -238,6 +241,28 @@ function buildProviders() {
   providers.push(new JobicyJobProvider());     // remote jobs, unlimited
   providers.push(new TheMuseJobProvider());    // tech companies, unlimited
   providers.push(new HimalayasJobProvider());  // remote tech, unlimited
+
+  // Key-gated free providers
+  if (process.env.USAJOBS_API_KEY) {
+    providers.push(new USAJobsProvider());    // US government & federal jobs
+  }
+  if (process.env.FINDWORK_API_KEY) {
+    providers.push(new FindWorkJobProvider()); // tech job board, free tier
+  }
+
+  // Apify actors for LinkedIn, Indeed, Glassdoor (requires APIFY_API_TOKEN)
+  const apifyToken = process.env.APIFY_API_TOKEN;
+  if (apifyToken) {
+    providers.push(
+      new ApifyJobProvider({ name: "LinkedIn", actorId: "bebity/linkedin-jobs-scraper", token: apifyToken })
+    );
+    providers.push(
+      new ApifyJobProvider({ name: "Indeed", actorId: "misceres/indeed-scraper", token: apifyToken })
+    );
+    providers.push(
+      new ApifyJobProvider({ name: "Glassdoor", actorId: "bebity/glassdoor-jobs-scraper", token: apifyToken })
+    );
+  }
 
   return providers;
 }
