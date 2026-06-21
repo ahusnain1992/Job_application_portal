@@ -121,7 +121,7 @@ export default async function AdminDashboard() {
         prisma.application.count({ where: { appliedById: member.id, status: JobStatus.APPLIED, appliedDateTime: { gte: week } } }),
         prisma.application.count({ where: { lastUpdatedById: member.id, status: { in: [JobStatus.SKIPPED, JobStatus.NOT_RELEVANT] }, updatedAt: { gte: week } } }),
         prisma.job.count({ where: { openedById: member.id, openedAt: { gte: week } } }),
-        prisma.application.count({ where: { appliedById: member.id, flaggedFast: true, appliedDateTime: { gte: week } } }),
+        prisma.application.count({ where: { appliedById: member.id, flaggedFast: true, flagDismissed: false, appliedDateTime: { gte: week } } }),
         prisma.application.count({ where: { appliedById: member.id, verifiedByGmail: true, appliedDateTime: { gte: week } } }),
         prisma.application.count({
           where: {
@@ -153,7 +153,7 @@ export default async function AdminDashboard() {
   });
 
   const flaggedApplications = await prisma.application.findMany({
-    where: { flaggedFast: true, verifiedByGmail: false },
+    where: { flaggedFast: true, verifiedByGmail: false, flagDismissed: false },
     include: {
       appliedBy: { select: { name: true } },
       job: { select: { title: true, companyName: true, id: true } },
@@ -374,8 +374,8 @@ export default async function AdminDashboard() {
                     </td>
                     <td className="py-2 pr-4 text-muted">{app.client.clientName}</td>
                     <td className="py-2 pr-4">
-                      <Badge tone={app.status === JobStatus.APPLIED ? "brand" : app.flaggedFast ? "danger" : "neutral"}>
-                        {app.status}{app.flaggedFast ? " ⚑" : ""}
+                      <Badge tone={app.status === JobStatus.APPLIED ? "brand" : (app.flaggedFast && !(app as any).flagDismissed) ? "danger" : "neutral"}>
+                        {app.status}{(app.flaggedFast && !(app as any).flagDismissed) ? " ⚑" : ""}
                       </Badge>
                     </td>
                     <td className="py-2 pr-4 text-muted">{shortDate(app.updatedAt)}</td>

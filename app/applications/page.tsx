@@ -89,7 +89,7 @@ export default async function ApplicationsPage({
   ]);
 
   const appliedCount = applications.filter((a) => a.status === JobStatus.APPLIED).length;
-  const flaggedCount = applications.filter((a) => a.flaggedFast && !a.verifiedByGmail).length;
+  const flaggedCount = applications.filter((a) => a.flaggedFast && !a.verifiedByGmail && !(a as any).flagDismissed).length;
   const missingProofCount = applications.filter(
     (a) => a.status === JobStatus.APPLIED && !a.confirmationNumber && !a.proofUrl && !a.verifiedByGmail
   ).length;
@@ -274,7 +274,7 @@ export default async function ApplicationsPage({
                         <td className="py-3 pr-4">
                           <div className="flex flex-col gap-1">
                             <Badge tone={STATUS_TONE[app.status] ?? "neutral"}>{statusLabel(app.status)}</Badge>
-                            {app.flaggedFast && !app.verifiedByGmail && (
+                            {app.flaggedFast && !app.verifiedByGmail && !(app as any).flagDismissed && (
                               <span className="inline-flex items-center gap-1 text-xs text-red-600">
                                 <AlertTriangle size={10} /> Fast
                               </span>
