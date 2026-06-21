@@ -32,40 +32,55 @@ export async function rewriteResumeForJob(input: ResumeRewriteInput): Promise<Re
     ? `Already covered keywords to emphasise: ${input.coveredKeywords.slice(0, 10).join(", ")}.`
     : "";
 
-  const prompt = `You are an expert resume writer helping a job seeker tailor their resume for a specific role.
+  const jobKeywords = [...new Set([...input.requiredSkills, ...input.missingKeywords])].slice(0, 20).join(", ");
 
-## Target job
-- Title: ${input.jobTitle}
-- Company: ${input.companyName}
-- Required skills: ${input.requiredSkills.slice(0, 15).join(", ")}
-${missingList}
-${coveredList}
+  const prompt = `You are an ATS optimization expert and professional resume writer. Your job is to rewrite a resume so it passes Applicant Tracking System (ATS) keyword scans and ranks higher for the target role — WITHOUT inventing anything.
 
-## Job description (excerpt)
-${input.jobDescription.slice(0, 2000)}
+## Target role
+Job title: ${input.jobTitle}
+Company: ${input.companyName}
+ATS keywords that MUST appear in the resume: ${jobKeywords}
+Keywords already in the resume (emphasise these): ${input.coveredKeywords.slice(0, 10).join(", ")}
 
-## Candidate's current resume
-${input.cvText.slice(0, 4000)}
+## Job description
+${input.jobDescription.slice(0, 2500)}
 
-## Instructions
-Rewrite the resume to better match the target role. Rules:
-1. Never invent experience, skills, companies, dates, or qualifications that are not in the original resume.
-2. Reorder and rephrase bullet points to lead with the most relevant experience first.
-3. Replace weak generic phrases with stronger action verbs and quantified outcomes where the original data supports it.
-4. Incorporate missing keywords naturally only where the candidate's actual experience supports them.
-5. Keep the same sections (Summary, Experience, Education, Skills etc) — do not remove sections.
-6. Output the full rewritten resume as plain text, ready to copy into a Word document.
-7. After the resume, add a section titled "CHANGES MADE:" with 3–5 bullet points summarising what you changed and why.
+## Original resume
+${input.cvText.slice(0, 4500)}
 
-Output format:
-[Full rewritten resume in plain text]
+## STRICT RULES — follow every one or the output is wrong:
+
+### What you MUST do
+1. **KEEP every bullet point** — never delete or merge bullets. The final resume must have the same number of bullets or MORE than the original. ATS scores improve with more relevant content, not less.
+2. **EXPAND thin bullets** — if a bullet is one line and vague (e.g. "Worked with SQL databases"), expand it to 2–3 lines with context, scope, and impact using details that can be reasonably inferred from the role and company (e.g. "Designed and maintained 12+ PostgreSQL schemas supporting 500K daily transactions, reducing query latency by 30% through index optimisation").
+3. **ADD new bullets** where a job role clearly involved tasks mentioned in the job description but the original resume didn't list them. Only add bullets grounded in what that role would realistically involve.
+4. **Inject every missing ATS keyword** listed above at least once, naturally woven into existing or new bullets. Do not stuff keywords — integrate them into real sentences.
+5. **Strengthen every bullet** with a strong action verb (Led, Architected, Delivered, Optimised, Automated, Deployed, Reduced, Increased) and a quantified result where plausible.
+6. **Update the Skills section** to list ALL keywords from the job description that the candidate has any exposure to, grouped by category (Cloud, Languages, Databases, Tools, etc.).
+7. **Rewrite the Summary/Profile** to directly mirror the job title and top 5 required skills.
+8. Keep all sections, all jobs, all dates, all companies, all education — nothing removed.
+
+### What you must NEVER do
+- Never invent companies, job titles, dates, degrees, or certifications not in the original.
+- Never reduce bullet count. If original has 4 bullets, output must have 4 or more.
+- Never use tables, columns, or special characters (ATS cannot parse them).
+- Never write "Responsible for" — always use action verbs.
+
+### ATS formatting rules
+- Plain text, no symbols except hyphens and pipes
+- Section headers in ALL CAPS (EXPERIENCE, EDUCATION, SKILLS, SUMMARY)
+- Dates as: Jan 2021 – Mar 2024
+- Each bullet starts with "• " then a strong action verb
+
+Output the full rewritten resume as plain text.
+Then add a section "CHANGES MADE:" with 5–8 bullet points explaining what you expanded, added, or changed and why it improves ATS ranking.
 
 CHANGES MADE:
 - ...`;
 
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [{ role: "user", content: prompt }]
   });
 
