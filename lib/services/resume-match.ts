@@ -71,27 +71,31 @@ function keywordInText(keyword: string, text: string): boolean {
   // Direct inclusion
   if (normText.includes(normKw)) return true;
   // Common aliases
+  // Each entry: canonical form → list of aliases that mean the same thing.
+  // The check runs both ways: if the keyword matches the key OR any alias,
+  // we look for the key OR any alias in the CV text.
   const aliases: Record<string, string[]> = {
     "python": ["py"],
-    "javascript": ["js", "node"],
+    "javascript": ["js", "node", "nodejs"],
     "typescript": ["ts"],
     "postgresql": ["postgres", "psql"],
     "kubernetes": ["k8s"],
     "tensorflow": ["tf"],
-    "powerbi": ["microsoftpowerbi", "pbix"],
-    "googlegcp": ["googlecloudplatform", "gcp"],
-    "amazonwebservices": ["aws"],
-    "microsoft azure": ["azure"],
-    "databricks": ["apachedatabricks"],
-    "cicd": ["continuousintegration", "continuousdelivery"],
-    "machinelearning": ["ml"],
-    "naturallanguageprocessing": ["nlp"],
+    "powerbi": ["microsoftpowerbi", "pbix", "power bi"],
+    "gcp": ["googlecloudplatform", "google cloud platform", "google cloud", "googlegcp"],
+    "aws": ["amazonwebservices", "amazon web services"],
+    "azure": ["microsoftazure", "microsoft azure"],
+    "databricks": ["apachedatabricks", "apache databricks"],
+    "cicd": ["continuousintegration", "continuousdelivery", "ci cd", "ci/cd"],
+    "machinelearning": ["ml", "machine learning"],
+    "naturallanguageprocessing": ["nlp", "natural language processing"],
   };
 
   for (const [key, aliasList] of Object.entries(aliases)) {
-    if (normKw === normalize(key) || normKw === normalize(aliasList[0] || "")) {
-      if (aliasList.some((a) => normText.includes(normalize(a)))) return true;
-      if (normText.includes(normalize(key))) return true;
+    const allForms = [key, ...aliasList].map(normalize);
+    if (allForms.includes(normKw)) {
+      // If any form of this keyword exists in the CV text, it's a match
+      if (allForms.some((f) => f && normText.includes(f))) return true;
     }
   }
 
