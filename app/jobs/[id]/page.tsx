@@ -91,7 +91,15 @@ export default async function JobDetailPage({
       )}
       {searchParams.error && (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {searchParams.error === "invalid-resume" ? "Invalid resume selection." : "Something went wrong — please try again."}
+          {searchParams.error === "proof-required"
+            ? "Please enter a confirmation number or screenshot link before marking this job as Applied."
+            : searchParams.error === "skip-reason-required"
+            ? "Please choose a skip or problem reason before saving."
+            : searchParams.error === "invalid-resume"
+            ? "Invalid resume selection — please pick a resume from the list and try again."
+            : searchParams.error === "invalid-job"
+            ? "This job could not be found or no longer belongs to this client. Please go back and refresh."
+            : "Something went wrong — please try again. If the problem continues, contact your admin."}
         </div>
       )}
       {lockActive && (
@@ -105,6 +113,19 @@ export default async function JobDetailPage({
           Applied by <strong className="ml-1">{app.appliedBy?.name}</strong>
           {app.appliedDateTime && <span className="ml-1 text-muted">on {shortDate(app.appliedDateTime)}</span>}
           {app.verifiedByGmail && <span className="ml-2 font-semibold">· ✓ Gmail verified</span>}
+        </div>
+      )}
+
+      {/* Employee workflow guide — shown only when job is still actionable */}
+      {!isAdmin && !isApplied && !alreadyAppliedByOther && (
+        <div className="mb-4 rounded-lg border border-brand/20 bg-[#F0FAF7] px-4 py-3 text-sm text-[#186A5E]">
+          <div className="font-semibold mb-1">How to apply for this job:</div>
+          <ol className="list-decimal list-inside space-y-0.5 text-xs leading-5">
+            <li>Click <strong>Open Job</strong> to open the company&apos;s careers page in a new tab.</li>
+            <li>Find the role and submit the application manually on the employer&apos;s website.</li>
+            <li>Copy the <strong>confirmation number</strong> or save a <strong>screenshot link</strong> as proof.</li>
+            <li>Come back here and fill in the proof, then click <strong>Mark as Applied</strong>.</li>
+          </ol>
         </div>
       )}
 

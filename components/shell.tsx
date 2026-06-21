@@ -29,7 +29,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const links = user.role === Role.ADMIN ? adminLinks : teamLinks;
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen bg-canvas overflow-x-hidden">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-line bg-white px-4 py-5 lg:block">
         <Link href={user.role === Role.ADMIN ? "/admin" : "/team"} className="block">
           <div className="text-sm font-semibold uppercase tracking-wide text-brand">Operations Portal</div>
@@ -69,7 +69,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
         </header>
-        <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="min-w-0 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

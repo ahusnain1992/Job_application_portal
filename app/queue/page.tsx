@@ -125,7 +125,7 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
     <AppShell>
       <QueueRefresh />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-4 min-w-0">
         <div>
           <div className="text-sm font-medium uppercase tracking-wide text-brand">Today&apos;s work</div>
           <h1 className="mt-1 text-2xl font-semibold text-ink">Application Queue</h1>
@@ -292,50 +292,59 @@ function QueueCard({ job, showClient }: { job: QueueJob; showClient: boolean }) 
   return (
     <Link
       href={`/jobs/${job.id}`}
-      className="group block rounded-lg border border-line bg-white p-4 shadow-panel transition-all hover:border-brand/50 hover:shadow-md"
+      className="group block w-full min-w-0 rounded-lg border border-line bg-white p-3 sm:p-4 shadow-panel transition-all hover:border-brand/50 hover:shadow-md overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-2 min-w-0">
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-ink group-hover:text-brand">{job.companyName}</div>
-          <div className="mt-0.5 truncate text-sm text-muted">{job.title}</div>
+      {/* Header row: company + badge */}
+      <div className="flex items-start gap-2 min-w-0">
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <div className="truncate font-semibold text-ink group-hover:text-brand text-sm sm:text-base">{job.companyName}</div>
+          <div className="mt-0.5 truncate text-xs sm:text-sm text-muted">{job.title}</div>
         </div>
-        <Badge tone={ql.tone}>{ql.label}</Badge>
+        <div className="shrink-0">
+          <Badge tone={ql.tone}>{ql.label}</Badge>
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-        <span className="flex items-center gap-1">
-          <MapPin size={10} /> {job.location}
+      {/* Meta row: location, work mode, salary — each truncated */}
+      <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted sm:flex-row sm:flex-wrap sm:gap-x-3 sm:gap-y-1">
+        <span className="flex items-center gap-1 truncate">
+          <MapPin size={10} className="shrink-0" />
+          <span className="truncate">{job.location}</span>
         </span>
-        <span className="flex items-center gap-1">
-          <BriefcaseBusiness size={10} /> {workModeLabel(job.workMode)}
+        <span className="flex items-center gap-1 shrink-0">
+          <BriefcaseBusiness size={10} className="shrink-0" /> {workModeLabel(job.workMode)}
         </span>
         {(job.salaryMin || job.salaryMax) && (
-          <span className="flex items-center gap-1">
-            <Banknote size={10} /> {money(job.salaryMin, job.salaryMax)}
+          <span className="flex items-center gap-1 shrink-0">
+            <Banknote size={10} className="shrink-0" /> {money(job.salaryMin, job.salaryMax)}
           </span>
         )}
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      {/* Footer row: match score + client/status */}
+      <div className="mt-2 flex items-center justify-between gap-2 min-w-0">
         <span
-          className={`text-sm font-semibold ${
+          className={`shrink-0 text-sm font-semibold ${
             job.matchScore >= 75 ? "text-brand" : job.matchScore >= 55 ? "text-blue-600" : "text-muted"
           }`}
         >
           {job.matchScore}% match
         </span>
-        <div className="flex items-center gap-2">
-          {showClient && <span className="text-xs text-muted">{job.client.clientName}</span>}
+        <div className="flex min-w-0 items-center gap-2">
+          {showClient && (
+            <span className="truncate text-xs text-muted max-w-[120px]">{job.client.clientName}</span>
+          )}
           {job.status === JobStatus.IN_PROGRESS && (
-            <span className="flex items-center gap-1 text-xs text-blue-600">
+            <span className="flex shrink-0 items-center gap-1 text-xs text-blue-600">
               <Clock size={10} /> In progress
             </span>
           )}
         </div>
       </div>
 
+      {/* Warning — capped at one line on mobile */}
       {job.matchWarnings.length > 0 && (
-        <div className="mt-2 rounded bg-[#FFF6EB] px-2 py-1 text-xs text-[#8A4604]">
+        <div className="mt-2 rounded bg-[#FFF6EB] px-2 py-1 text-xs text-[#8A4604] line-clamp-2">
           ⚠ {job.matchWarnings[0]}
         </div>
       )}
