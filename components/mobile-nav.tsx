@@ -4,12 +4,11 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 
-type NavItem = { href: string; label: string; icon: React.ElementType };
+type NavItem = { href: string; label: string };
 
 export function MobileNav({ links }: { links: NavItem[] }) {
   const [open, setOpen] = useState(false);
 
-  // Close on route change
   useEffect(() => {
     const close = () => setOpen(false);
     window.addEventListener("popstate", close);
@@ -26,7 +25,6 @@ export function MobileNav({ links }: { links: NavItem[] }) {
         <Menu size={20} />
       </button>
 
-      {/* Backdrop */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/40"
@@ -34,7 +32,6 @@ export function MobileNav({ links }: { links: NavItem[] }) {
         />
       )}
 
-      {/* Drawer */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transition-transform duration-200 ${
           open ? "translate-x-0" : "-translate-x-full"
@@ -54,20 +51,16 @@ export function MobileNav({ links }: { links: NavItem[] }) {
           </button>
         </div>
         <nav className="mt-2 space-y-0.5 px-3 py-2">
-          {links.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-ink hover:bg-canvas"
-              >
-                <Icon size={18} />
-                {item.label}
-              </Link>
-            );
-          })}
+          {links.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="flex items-center rounded-md px-3 py-2.5 text-sm font-medium text-ink hover:bg-canvas"
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
       </div>
     </>

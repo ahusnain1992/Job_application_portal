@@ -54,7 +54,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur">
           <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 lg:hidden">
-              <MobileNav links={links} />
+              <MobileNav links={links.map(({ href, label }) => ({ href, label }))} />
             </div>
             <div className="hidden lg:block">
               <div className="text-sm font-medium text-muted">{roleLabel(user.role)}</div>
