@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
-export function DeleteResumeButton({ resumeId, resumeName, onDeleted }: {
+export function DeleteResumeButton({ resumeId, resumeName }: {
   resumeId: string;
   resumeName: string;
-  onDeleted: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,7 +23,7 @@ export function DeleteResumeButton({ resumeId, resumeName, onDeleted }: {
         return;
       }
       setOpen(false);
-      onDeleted();
+      window.location.reload();
     } catch {
       setError("Network error — please try again.");
       setLoading(false);

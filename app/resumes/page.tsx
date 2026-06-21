@@ -199,7 +199,6 @@ export default async function ResumesPage() {
                               <DeleteResumeButton
                                 resumeId={resume.id}
                                 resumeName={resume.name}
-                                onDeleted={() => { if (typeof window !== "undefined") window.location.reload(); }}
                               />
                             )}
                           </div>

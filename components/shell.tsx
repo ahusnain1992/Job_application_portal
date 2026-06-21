@@ -4,6 +4,7 @@ import { BriefcaseBusiness, ClipboardList, FileText, LayoutDashboard, LogOut, Us
 import { Role } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { roleLabel } from "@/lib/format";
+import { MobileNav } from "@/components/mobile-nav";
 
 const adminLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -52,24 +53,26 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       <div className="lg:pl-64">
         <header className="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur">
           <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <div>
+            <div className="flex items-center gap-3 lg:hidden">
+              <MobileNav links={links} />
+            </div>
+            <div className="hidden lg:block">
               <div className="text-sm font-medium text-muted">{roleLabel(user.role)}</div>
               <div className="text-base font-semibold text-ink">{user.name}</div>
             </div>
-            <form action="/api/auth/logout" method="post">
-              <button className="focus-ring inline-flex h-10 items-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-medium text-ink hover:bg-canvas" title="Sign out">
-                <LogOut size={17} />
-                Sign out
-              </button>
-            </form>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="hidden sm:block">
+                <div className="text-sm font-medium text-muted">{roleLabel(user.role)}</div>
+                <div className="text-sm font-semibold text-ink lg:hidden">{user.name}</div>
+              </div>
+              <form action="/api/auth/logout" method="post">
+                <button className="focus-ring inline-flex h-10 items-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-medium text-ink hover:bg-canvas" title="Sign out">
+                  <LogOut size={17} />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+              </form>
+            </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto border-t border-line px-4 py-2 lg:hidden">
-            {links.map((item) => (
-              <Link key={item.href} href={item.href} className="whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-ink hover:bg-canvas">
-                {item.label}
-              </Link>
-            ))}
-          </nav>
         </header>
         <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>

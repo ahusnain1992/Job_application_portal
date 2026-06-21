@@ -43,9 +43,9 @@ export default async function TeamDashboard() {
       where: { lastUpdatedById: user.id, status: JobStatus.SKIPPED, updatedAt: { gte: today } }
     }),
     prisma.job.count({ where: { clientId: { in: assignedClientIds }, status: JobStatus.FOLLOW_UP_NEEDED } }),
-    prisma.job.findMany({
+    assignedClientIds.length > 0 ? prisma.job.findMany({
       where: {
-        clientId: assignedClientIds.length > 0 ? { in: assignedClientIds } : undefined,
+        clientId: { in: assignedClientIds },
         status: { in: [JobStatus.SUGGESTED, JobStatus.APPROVED, JobStatus.ASSIGNED, JobStatus.NEW] },
         applyUrl: { not: null }
       },
@@ -60,7 +60,7 @@ export default async function TeamDashboard() {
         resumeRecommendation: true,
         client: { select: { clientName: true } }
       }
-    }),
+    }) : Promise.resolve([] as { id: string; title: string; companyName: string; matchScore: number; location: string; resumeRecommendation: string | null; client: { clientName: string } }[]),
     user.role !== Role.ADMIN
       ? prisma.dailyTarget.findFirst({ where: { userId: user.id }, select: { target: true } })
       : Promise.resolve(null)

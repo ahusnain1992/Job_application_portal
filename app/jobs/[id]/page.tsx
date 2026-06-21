@@ -93,10 +93,10 @@ export default async function JobDetailPage({
   const needsResumeWork = job.resumeRecommendation === "FULL_REWRITE" || job.resumeRecommendation === "NEW_VERSION";
   const hasWebhook = !!process.env.N8N_RESUME_WEBHOOK_URL;
 
-  // Find the best recommended resume for this job
-  const recommendedResume = job.client.resumes.find((r) =>
-    r.name.toLowerCase().includes(job.resumeClusterId?.toLowerCase() ?? "_nomatch_")
-  ) ?? job.client.resumes[0] ?? null;
+  // Use only the AI-matched best resume — no fallback guessing
+  const recommendedResume = job.bestResumeId
+    ? job.client.resumes.find((r) => r.id === job.bestResumeId) ?? null
+    : null;
 
   const hasProof = !!(app?.confirmationNumber || app?.proofUrl || app?.verifiedByGmail);
   const isAdmin = user.role === Role.ADMIN;

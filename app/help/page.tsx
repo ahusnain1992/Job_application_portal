@@ -140,15 +140,15 @@ export default async function HelpPage() {
                 />
                 <GuideStep
                   number={5}
-                  title="Set daily targets"
-                  description="Go to Settings → Team Members. Click a user to set their daily application target. The default is 15 per day."
-                  action={{ href: "/settings", label: "Settings" }}
+                  title="Upload resume versions"
+                  description="Go to Resumes and use the Add Resume Version form. Upload the PDF or paste a Google Drive link so employees can download it. Paste the full plain text of the resume so the app can match it to jobs automatically."
+                  action={{ href: "/resumes", label: "Manage Resumes" }}
                 />
                 <GuideStep
                   number={6}
-                  title="Upload resumes"
-                  description="Go to Resumes → Add resume. Upload the PDF or paste the resume text. Assign it to the right client. The AI uses this to match and tailor resumes for each job."
-                  action={{ href: "/resumes/strategy", label: "Resume Strategy" }}
+                  title="Monitor daily progress"
+                  description="Go to the Applications page and set the date range to 'Today'. You can filter by team member to see who applied to what. The queue page also shows an applied-today count."
+                  action={{ href: "/applications", label: "Applications" }}
                 />
                 <GuideStep
                   number={7}

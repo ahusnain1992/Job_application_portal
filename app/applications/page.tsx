@@ -237,93 +237,130 @@ export default async function ApplicationsPage({
           </form>
         </Panel>
 
-        {/* Applications table */}
+        {/* Applications list */}
         <Panel title={`${applications.length} applications`}>
           {applications.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted">No applications found for the selected filters.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] border-collapse text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line text-xs uppercase text-muted">
-                    <th className="py-3 pr-4 font-semibold">Job</th>
-                    <th className="py-3 pr-4 font-semibold">Client</th>
-                    <th className="py-3 pr-4 font-semibold">Applied by</th>
-                    <th className="py-3 pr-4 font-semibold">Status</th>
-                    <th className="py-3 pr-4 font-semibold">Proof</th>
-                    <th className="py-3 pr-4 font-semibold">Date</th>
-                    <th className="py-3 pr-4 font-semibold">Link</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {applications.map((app) => {
-                    const needsProof = app.status === JobStatus.APPLIED && !app.confirmationNumber && !app.proofUrl && !app.verifiedByGmail;
-                    return (
-                      <tr key={app.id} className={`border-b border-line/60 align-top last:border-0 ${needsProof ? "bg-[#FFFBF0]" : ""}`}>
-                        <td className="py-3 pr-4">
-                          <Link href={`/jobs/${app.jobId}`} className="font-medium text-ink hover:text-brand">
-                            {app.job.title}
-                          </Link>
-                          <div className="text-xs text-muted">{app.job.companyName}</div>
-                          {app.reasonSkipped && (
-                            <div className="mt-0.5 text-xs text-muted italic">{app.reasonSkipped}</div>
-                          )}
-                        </td>
-                        <td className="py-3 pr-4 text-muted">{app.client.clientName}</td>
-                        <td className="py-3 pr-4 text-muted">{app.appliedBy?.name || "—"}</td>
-                        <td className="py-3 pr-4">
-                          <div className="flex flex-col gap-1">
-                            <Badge tone={STATUS_TONE[app.status] ?? "neutral"}>{statusLabel(app.status)}</Badge>
-                            {app.flaggedFast && !app.verifiedByGmail && !(app as any).flagDismissed && (
-                              <span className="inline-flex items-center gap-1 text-xs text-red-600">
-                                <AlertTriangle size={10} /> Fast
-                              </span>
+            <>
+              {/* Mobile cards (< md) */}
+              <div className="space-y-3 md:hidden">
+                {applications.map((app) => {
+                  const needsProof = app.status === JobStatus.APPLIED && !app.confirmationNumber && !app.proofUrl && !app.verifiedByGmail;
+                  return (
+                    <Link
+                      key={app.id}
+                      href={`/jobs/${app.jobId}`}
+                      className={`block rounded-lg border p-3 text-sm ${needsProof ? "border-warn/40 bg-[#FFFBF0]" : "border-line bg-white"}`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-ink truncate">{app.job.title}</div>
+                          <div className="text-xs text-muted">{app.job.companyName} · {app.client.clientName}</div>
+                        </div>
+                        <Badge tone={STATUS_TONE[app.status] ?? "neutral"}>{statusLabel(app.status)}</Badge>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                        <span>{shortDate(app.appliedDateTime || app.updatedAt)}</span>
+                        {app.appliedBy && <span>by {app.appliedBy.name}</span>}
+                        {app.verifiedByGmail && (
+                          <span className="flex items-center gap-0.5 text-brand"><ShieldCheck size={10} /> Gmail verified</span>
+                        )}
+                        {needsProof && <span className="font-medium text-warn">Missing proof</span>}
+                        {app.confirmationNumber && <span className="font-mono">{app.confirmationNumber}</span>}
+                        {app.flaggedFast && !app.verifiedByGmail && !(app as any).flagDismissed && (
+                          <span className="flex items-center gap-0.5 text-red-600"><AlertTriangle size={10} /> Flagged fast</span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table (md+) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-line text-xs uppercase text-muted">
+                      <th className="py-3 pr-4 font-semibold">Job</th>
+                      <th className="py-3 pr-4 font-semibold">Client</th>
+                      <th className="py-3 pr-4 font-semibold">Applied by</th>
+                      <th className="py-3 pr-4 font-semibold">Status</th>
+                      <th className="py-3 pr-4 font-semibold">Proof</th>
+                      <th className="py-3 pr-4 font-semibold">Date</th>
+                      <th className="py-3 pr-4 font-semibold">Link</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {applications.map((app) => {
+                      const needsProof = app.status === JobStatus.APPLIED && !app.confirmationNumber && !app.proofUrl && !app.verifiedByGmail;
+                      return (
+                        <tr key={app.id} className={`border-b border-line/60 align-top last:border-0 ${needsProof ? "bg-[#FFFBF0]" : ""}`}>
+                          <td className="py-3 pr-4">
+                            <Link href={`/jobs/${app.jobId}`} className="font-medium text-ink hover:text-brand">
+                              {app.job.title}
+                            </Link>
+                            <div className="text-xs text-muted">{app.job.companyName}</div>
+                            {app.reasonSkipped && (
+                              <div className="mt-0.5 text-xs text-muted italic">{app.reasonSkipped}</div>
                             )}
-                            {app.verifiedByGmail && (
-                              <span className="inline-flex items-center gap-1 text-xs text-brand">
-                                <ShieldCheck size={10} /> Verified
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4">
-                          {app.verifiedByGmail ? (
-                            <span className="text-xs text-brand font-medium">Gmail ✓</span>
-                          ) : app.confirmationNumber ? (
-                            <span className="text-xs text-muted font-mono">{app.confirmationNumber}</span>
-                          ) : app.proofUrl ? (
-                            <a href={app.proofUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand hover:underline">
-                              Screenshot <ExternalLink size={10} />
-                            </a>
-                          ) : app.status === JobStatus.APPLIED ? (
-                            <span className="text-xs font-medium text-warn">Missing</span>
-                          ) : (
-                            <span className="text-xs text-muted">—</span>
-                          )}
-                        </td>
-                        <td className="py-3 pr-4 text-xs text-muted">
-                          {shortDate(app.appliedDateTime || app.updatedAt)}
-                          {app.timeSpentMinutes != null && (
-                            <div className="flex items-center gap-1 text-muted">
-                              <Clock size={9} /> {app.timeSpentMinutes}m
+                          </td>
+                          <td className="py-3 pr-4 text-muted">{app.client.clientName}</td>
+                          <td className="py-3 pr-4 text-muted">{app.appliedBy?.name || "—"}</td>
+                          <td className="py-3 pr-4">
+                            <div className="flex flex-col gap-1">
+                              <Badge tone={STATUS_TONE[app.status] ?? "neutral"}>{statusLabel(app.status)}</Badge>
+                              {app.flaggedFast && !app.verifiedByGmail && !(app as any).flagDismissed && (
+                                <span className="inline-flex items-center gap-1 text-xs text-red-600">
+                                  <AlertTriangle size={10} /> Fast
+                                </span>
+                              )}
+                              {app.verifiedByGmail && (
+                                <span className="inline-flex items-center gap-1 text-xs text-brand">
+                                  <ShieldCheck size={10} /> Verified
+                                </span>
+                              )}
                             </div>
-                          )}
-                        </td>
-                        <td className="py-3 pr-4">
-                          {app.job.applyUrl ? (
-                            <a href={app.job.applyUrl} target="_blank" rel="noreferrer" className="text-xs text-muted hover:text-brand">
-                              <ExternalLink size={13} />
-                            </a>
-                          ) : (
-                            <span className="text-xs text-muted">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="py-3 pr-4">
+                            {app.verifiedByGmail ? (
+                              <span className="text-xs text-brand font-medium">Gmail ✓</span>
+                            ) : app.confirmationNumber ? (
+                              <span className="text-xs text-muted font-mono">{app.confirmationNumber}</span>
+                            ) : app.proofUrl ? (
+                              <a href={app.proofUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand hover:underline">
+                                Screenshot <ExternalLink size={10} />
+                              </a>
+                            ) : app.status === JobStatus.APPLIED ? (
+                              <span className="text-xs font-medium text-warn">Missing</span>
+                            ) : (
+                              <span className="text-xs text-muted">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 pr-4 text-xs text-muted">
+                            {shortDate(app.appliedDateTime || app.updatedAt)}
+                            {app.timeSpentMinutes != null && (
+                              <div className="flex items-center gap-1 text-muted">
+                                <Clock size={9} /> {app.timeSpentMinutes}m
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 pr-4">
+                            {app.job.applyUrl ? (
+                              <a href={app.job.applyUrl} target="_blank" rel="noreferrer" className="text-xs text-muted hover:text-brand">
+                                <ExternalLink size={13} />
+                              </a>
+                            ) : (
+                              <span className="text-xs text-muted">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </Panel>
       </div>
