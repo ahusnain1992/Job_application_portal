@@ -20,6 +20,7 @@ export default async function ClientDetailPage({
   await requireClientAccess(user, params.id);
 
   const isAdmin = user.role === Role.ADMIN;
+  const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
   const [client, allTeamMembers] = await Promise.all([
     prisma.clientProfile.findUnique({
@@ -77,7 +78,12 @@ export default async function ClientDetailPage({
       ) : null}
       {searchParams.error === "google-not-configured" ? (
         <div className="mb-4 rounded-md border border-warn/40 bg-[#FFF6EB] px-4 py-3 text-sm text-[#8A4604]">
-          Google OAuth is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables.
+          <strong>Gmail not configured.</strong> To enable Gmail verification, add these two variables in Railway → your service → Variables:
+          <ul className="mt-2 list-disc pl-5 space-y-1 font-mono text-xs">
+            <li>GOOGLE_CLIENT_ID</li>
+            <li>GOOGLE_CLIENT_SECRET</li>
+          </ul>
+          <p className="mt-2 text-xs">Get these from <strong>console.cloud.google.com</strong> → APIs &amp; Services → Credentials → Create OAuth 2.0 Client ID (Web application). Gmail verification is optional — the portal works fully without it.</p>
         </div>
       ) : null}
 
@@ -95,13 +101,20 @@ export default async function ClientDetailPage({
                 <div className="inline-flex items-center gap-1 rounded-md border border-brand/30 bg-[#ECF7F4] px-3 py-1.5 text-xs font-semibold text-[#186A5E]">
                   <CheckCircle size={12} /> {client.gmailEmail}
                 </div>
-              ) : (
+              ) : googleConfigured ? (
                 <a
                   href={`/api/gmail/connect?clientId=${client.id}`}
                   className="focus-ring inline-flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink hover:bg-canvas"
                 >
                   <Mail size={13} /> Connect Gmail
                 </a>
+              ) : (
+                <span
+                  title="Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Railway to enable Gmail verification"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-line bg-canvas px-3 py-1.5 text-xs text-muted cursor-not-allowed"
+                >
+                  <Mail size={13} /> Gmail (not configured)
+                </span>
               )}
             </div>
           ) : null

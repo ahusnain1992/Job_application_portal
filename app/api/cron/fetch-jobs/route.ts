@@ -95,6 +95,12 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      // Post-fetch relevance filter — remove jobs that don't match the client's
+      // location preferences or job titles. Free providers (Arbeitnow, Jobicy etc.)
+      // don't support server-side location filtering so we must do it here.
+      const relevantJobs = allJobs.filter((job) => isJobRelevant(job, client));
+      summary.jobsFetched = summary.jobsFetched - (allJobs.length - relevantJobs.length);
+
       // Upsert the source records
       await ensureSources(providers.map((p) => p.name));
 
@@ -103,7 +109,7 @@ export async function GET(req: NextRequest) {
           .map((s) => [s.name, s.id])
       );
 
-      for (const job of allJobs) {
+      for (const job of relevantJobs) {
         try {
           const sig = duplicateSignature({
             companyName: job.companyName,
@@ -298,6 +304,46 @@ function buildProviders() {
   }
 
   return providers;
+}
+
+type ClientForFilter = {
+  targetJobTitles: string[];
+  alternativeJobTitles: string[];
+  preferredLocations: string[];
+  workModePreference: WorkMode;
+};
+
+function isJobRelevant(job: NormalizedJob, client: ClientForFilter): boolean {
+  const allTitles = [...client.targetJobTitles, ...client.alternativeJobTitles];
+  const jobTitleLower = job.title.toLowerCase();
+
+  // Title must be a reasonable match — job title contains a client title word or vice versa
+  const titleMatch = allTitles.some((t) => {
+    const tl = t.toLowerCase();
+    // Each significant word in client title must appear in job title
+    const words = tl.split(/\s+/).filter((w) => w.length > 2 && !["and", "the", "for", "with"].includes(w));
+    return words.some((w) => jobTitleLower.includes(w));
+  });
+  if (!titleMatch) return false;
+
+  // If client is remote-only, allow any remote job regardless of location
+  if (client.workModePreference === WorkMode.REMOTE) {
+    return job.workMode === WorkMode.REMOTE || job.workMode === WorkMode.FLEXIBLE ||
+      job.location.toLowerCase().includes("remote") || job.location.toLowerCase().includes("worldwide");
+  }
+
+  // Otherwise require location match — job location contains a preferred location keyword
+  // or the job is remote/hybrid (which is acceptable for onsite-preferring clients too)
+  if (job.workMode === WorkMode.REMOTE || job.workMode === WorkMode.HYBRID) return true;
+  if (job.location.toLowerCase().includes("remote")) return true;
+
+  const jobLocationLower = job.location.toLowerCase();
+  return client.preferredLocations.some((loc) => {
+    const locLower = loc.toLowerCase();
+    // Match on city name, state abbreviation, or country
+    const parts = locLower.split(/[\s,]+/).filter((p) => p.length > 1);
+    return parts.some((p) => jobLocationLower.includes(p));
+  });
 }
 
 async function ensureSources(names: string[]) {
