@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { EmploymentType, Role, WorkMode } from "@prisma/client";
 import { AppShell } from "@/components/shell";
+import { LocationPicker } from "@/components/location-picker";
 import { PageHeader, Panel, Select, SubmitButton, TextArea, TextInput } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -83,33 +84,14 @@ export default async function EditClientPage({
                   placeholder="ETL Developer, BI Engineer"
                 />
               </label>
-              <label className="block text-sm font-medium text-ink">
-                Countries looking for jobs in <span className="font-normal text-muted">(comma separated)</span>
-                <TextArea
-                  name="preferredCountries"
-                  defaultValue={join(client.preferredCountries)}
-                  className="mt-1"
-                  placeholder="USA, Canada"
+              <div>
+                <p className="text-sm font-medium text-ink mb-2">Job locations</p>
+                <LocationPicker
+                  defaultCountries={client.preferredCountries}
+                  defaultCities={client.preferredCities}
+                  defaultLocations={client.preferredLocations}
                 />
-              </label>
-              <label className="block text-sm font-medium text-ink">
-                Preferred cities <span className="font-normal text-muted">(comma separated — used to search & filter jobs)</span>
-                <TextArea
-                  name="preferredCities"
-                  defaultValue={join(client.preferredCities)}
-                  className="mt-1"
-                  placeholder="Chicago, New York, Dallas"
-                />
-              </label>
-              <label className="block text-sm font-medium text-ink">
-                Preferred locations <span className="font-normal text-muted">(legacy — kept for reference)</span>
-                <TextArea
-                  name="preferredLocations"
-                  defaultValue={join(client.preferredLocations)}
-                  className="mt-1"
-                  placeholder="Remote, Chicago, IL, Dallas, TX"
-                />
-              </label>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block text-sm font-medium text-ink">
                   Work mode
