@@ -11,21 +11,33 @@ import { duplicateSignature } from "@/lib/services/duplicates";
 import { scoreJobForClient } from "@/lib/services/matching";
 import { analyzeResumeJobFit } from "@/lib/services/resume-match";
 
-// Protect cron endpoint with a secret header
-function authorized(req: NextRequest) {
+// Protect cron endpoint: accept cron secret header OR admin session (UI button)
+async function authorized(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    if (process.env.NODE_ENV === "production") return false;
-    return true;
+
+  // Cron secret check (used by cron-job.org and Railway cron)
+  if (cronSecret) {
+    if (
+      req.headers.get("x-cron-secret") === cronSecret ||
+      req.headers.get("authorization") === `Bearer ${cronSecret}`
+    ) return true;
   }
-  return (
-    req.headers.get("x-cron-secret") === cronSecret ||
-    req.headers.get("authorization") === `Bearer ${cronSecret}`
-  );
+
+  // UI-triggered: allow admin session
+  if (req.headers.get("x-triggered-from-ui") === "1") {
+    const { getCurrentUser } = await import("@/lib/auth");
+    const user = await getCurrentUser();
+    if (user?.role === "ADMIN") return true;
+  }
+
+  // Dev fallback
+  if (!cronSecret && process.env.NODE_ENV !== "production") return true;
+
+  return false;
 }
 
 export async function GET(req: NextRequest) {
-  if (!authorized(req)) {
+  if (!await authorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

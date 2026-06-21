@@ -4,6 +4,7 @@ import { AlertTriangle, ShieldCheck, Clock, FileText, Pencil } from "lucide-reac
 import { AppShell } from "@/components/shell";
 import { JobTable } from "@/components/job-table";
 import { Badge, MetricCard, PageHeader, Panel } from "@/components/ui";
+import { FetchJobsButton } from "@/components/fetch-jobs-button";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { shortDate } from "@/lib/format";
@@ -159,7 +160,11 @@ export default async function AdminDashboard() {
 
   return (
     <AppShell>
-      <PageHeader title="Admin dashboard" eyebrow="Operations overview" />
+      <PageHeader
+        title="Admin dashboard"
+        eyebrow="Operations overview"
+        actions={<FetchJobsButton />}
+      />
 
       {/* Top-line metrics */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
