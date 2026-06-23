@@ -173,7 +173,6 @@ export function isJobRelevant(
     const locLower = job.location.toLowerCase();
     const isRemote =
       job.workMode === WorkMode.REMOTE ||
-      job.workMode === WorkMode.FLEXIBLE ||
       locLower.includes("remote") ||
       locLower.includes("worldwide") ||
       locLower.includes("anywhere");

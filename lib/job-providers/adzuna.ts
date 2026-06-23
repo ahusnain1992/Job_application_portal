@@ -20,8 +20,14 @@ export class AdzunaJobProvider implements JobProvider {
     // Falls back to constructor default (us) if not recognised.
     const countryCode = resolveAdzunaCountry(search.countries) || this.country;
 
+    // For remote-only clients, search Adzuna with where=remote so we get
+    // genuinely remote listings rather than fetching onsite jobs and discarding them.
+    const searchLocations = search.remoteOnly
+      ? ["remote"]
+      : (search.locations.length ? search.locations : [""]).slice(0, 2);
+
     for (const title of search.titles.slice(0, 3)) {
-      for (const location of (search.locations.length ? search.locations : [""]).slice(0, 2)) {
+      for (const location of searchLocations) {
         try {
           const params = new URLSearchParams({
             app_id: this.appId,
@@ -107,7 +113,7 @@ function inferWorkMode(location: string): WorkMode {
   const l = location.toLowerCase();
   if (l.includes("remote")) return WorkMode.REMOTE;
   if (l.includes("hybrid")) return WorkMode.HYBRID;
-  return WorkMode.FLEXIBLE;
+  return WorkMode.ONSITE;
 }
 
 function inferEmployment(value?: string): EmploymentType {
