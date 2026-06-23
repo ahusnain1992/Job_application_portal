@@ -196,9 +196,12 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
+    const flat = parsed.error.flatten();
+    console.error("[/api/clients] Zod validation failed:", JSON.stringify(flat));
     const code = zodErrorCode(parsed.error);
-    console.error("[/api/clients] Zod validation failed:", JSON.stringify(parsed.error.flatten()));
-    return redirectTo(`/clients?error=${code}&open=1`);
+    const firstBadField = Object.keys(flat.fieldErrors)[0] ?? "unknown";
+    const debugParam = code === "invalid-client" ? `&field=${encodeURIComponent(firstBadField)}` : "";
+    return redirectTo(`/clients?error=${code}${debugParam}&open=1`);
   }
 
   const data = parsed.data;

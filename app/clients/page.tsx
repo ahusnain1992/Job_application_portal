@@ -46,6 +46,10 @@ export default async function ClientsPage({
   const errorMessage = searchParams.error
     ? (ERROR_MESSAGES[searchParams.error] ?? "Something went wrong. Please try again.")
     : null;
+  const debugField = (searchParams as Record<string, string>).field;
+  const errorDetail = searchParams.error === "invalid-client" && debugField
+    ? `Field that failed: "${debugField}". Please screenshot this and report it.`
+    : null;
 
   // Keep form open when redirected back with an error
   const formOpen = !!(searchParams.open || searchParams.error);
@@ -56,7 +60,8 @@ export default async function ClientsPage({
 
       {errorMessage && (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
+          <p>{errorMessage}</p>
+          {errorDetail && <p className="mt-1 text-xs opacity-80">{errorDetail}</p>}
         </div>
       )}
 
