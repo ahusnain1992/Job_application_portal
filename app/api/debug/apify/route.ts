@@ -39,7 +39,7 @@ export async function GET() {
   try {
     const indeedInput = {
       position: "Data Engineer",
-      country: "us",
+      country: "US",
       location: "United States",
       maxItems: 3,
       parseCompanyDetails: false,
