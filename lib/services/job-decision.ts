@@ -54,7 +54,15 @@ export function deriveJobDecision(params: {
   applyUrl: string | null | undefined;
   matchWarnings?: string[];
 }): JobDecision {
-  const { matchScore, resumeRecommendation, resumeCoverageScore, applyUrl, matchWarnings = [] } = params;
+  // Normalize old DB values to new ATS-framed values
+  const legacyMap: Record<string, string> = {
+    "AS_IS": "LEVERAGE",
+    "MINOR_TAILORING": "LEVERAGE",
+    "FULL_REWRITE": "REWRITE",
+  };
+  const rawRec = params.resumeRecommendation;
+  const resumeRecommendation = rawRec && legacyMap[rawRec] ? legacyMap[rawRec] : rawRec;
+  const { matchScore, resumeCoverageScore, applyUrl, matchWarnings = [] } = params;
 
   const jobFitLabel: JobFitLabel =
     matchScore >= HIGH_MATCH ? "High" : matchScore >= LOW_MATCH ? "Medium" : "Low";
