@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { Role, WorkMode, EmploymentType } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
@@ -11,12 +11,18 @@ const urlOrDataUrl = z.string().max(10_000_000).refine(
   { message: "Must be a URL or uploaded file" }
 ).optional().nullable().or(z.literal(""));
 
+// URLs that are optional — empty strings pass, anything else must be a URL
+const optionalUrl = z.string().max(2000).refine(
+  (v) => v === "" || v.startsWith("http://") || v.startsWith("https://"),
+  { message: "URL must start with https://" }
+).optional().nullable().or(z.literal(""));
+
 const ClientCreateSchema = z.object({
-  clientName: z.string().min(1).max(200),
-  currentJobTitle: z.string().min(1).max(200),
-  targetJobTitles: z.string().min(1).max(1000),
+  clientName: z.string().min(1, "Client full name is required").max(200),
+  currentJobTitle: z.string().min(1, "Current job title is required").max(200),
+  targetJobTitles: z.string().min(1, "At least one target job title is required").max(1000),
   alternativeJobTitles: z.string().max(1000).optional(),
-  mainSkills: z.string().min(1).max(2000),
+  mainSkills: z.string().min(1, "At least one main skill is required").max(2000),
   secondarySkills: z.string().max(2000).optional(),
   preferredLocations: z.string().max(1000).optional().default(""),
   preferredCountries: z.string().max(500).optional().default(""),
@@ -25,36 +31,32 @@ const ClientCreateSchema = z.object({
   employmentTypePreference: z.nativeEnum(EmploymentType),
   minimumSalary: z.coerce.number().int().min(0).max(10_000_000).optional().nullable(),
   maximumSalary: z.coerce.number().int().min(0).max(10_000_000).optional().nullable(),
-  cvText: z.string().max(50000).optional().nullable(),
+  cvText: z.string().max(50000, "CV/resume text is too long. Please shorten or split into separate resume versions.").optional().nullable(),
   resumeUrl: urlOrDataUrl,
-  linkedinUrl: z.string().url().max(2000).optional().nullable().or(z.literal("")),
+  linkedinUrl: optionalUrl,
+  githubUrl: optionalUrl,
   applicationNotes: z.string().max(5000).optional().nullable(),
   keywordsInclude: z.string().max(2000).optional(),
   keywordsExclude: z.string().max(2000).optional(),
   industriesPreferred: z.string().max(1000).optional(),
   industriesToAvoid: z.string().max(1000).optional(),
   teamMemberId: z.string().cuid().optional().nullable().or(z.literal("")),
-  // Personal info
   dateOfBirth: z.string().optional().nullable(),
   phone: z.string().max(50).optional().nullable(),
-  personalEmail: z.string().email().max(200).optional().nullable().or(z.literal("")),
+  personalEmail: z.string().email("Please enter a valid email address").max(200).optional().nullable().or(z.literal("")),
   streetAddress: z.string().max(300).optional().nullable(),
   addressCity: z.string().max(100).optional().nullable(),
   addressState: z.string().max(100).optional().nullable(),
   addressZip: z.string().max(20).optional().nullable(),
   addressCountry: z.string().max(100).optional().nullable(),
-  githubUrl: z.string().url().max(2000).optional().nullable().or(z.literal("")),
-  // Education
   highestDegree: z.string().max(100).optional().nullable(),
   fieldOfStudy: z.string().max(200).optional().nullable(),
   university: z.string().max(200).optional().nullable(),
   graduationYear: z.coerce.number().int().min(1950).max(2100).optional().nullable(),
   gpa: z.string().max(20).optional().nullable(),
-  // Work preferences
   noticePeriod: z.string().max(100).optional().nullable(),
   availableFrom: z.string().optional().nullable(),
   languages: z.string().max(500).optional(),
-  // EEO
   genderEeo: z.string().max(100).optional().nullable(),
   ethnicityEeo: z.string().max(200).optional().nullable(),
   veteranStatus: z.string().max(100).optional().nullable(),
@@ -66,7 +68,7 @@ const ResumeCreateSchema = z.object({
   resumeName: z.string().min(1).max(200),
   fileUrl: urlOrDataUrl,
   resumeText: z.string().max(50000).optional().nullable(),
-  rewriteToolUrl: z.string().url().max(2000).optional().nullable().or(z.literal(""))
+  rewriteToolUrl: optionalUrl,
 });
 
 function list(value?: string | null) {
@@ -80,6 +82,29 @@ function parseDate(value?: string | null): Date | null {
   if (!value || String(value).trim() === "") return null;
   const d = new Date(String(value));
   return isNaN(d.getTime()) ? null : d;
+}
+
+function normalizeUrl(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  return `https://${trimmed}`;
+}
+
+// Map Zod field errors to user-friendly redirect codes
+function zodErrorCode(error: z.ZodError): string {
+  const fields = error.flatten().fieldErrors;
+  if (fields.clientName) return "name-required";
+  if (fields.currentJobTitle) return "title-required";
+  if (fields.targetJobTitles) return "no-target-titles";
+  if (fields.mainSkills) return "no-skills";
+  if (fields.linkedinUrl) return "invalid-linkedin";
+  if (fields.githubUrl) return "invalid-github";
+  if (fields.personalEmail) return "invalid-email";
+  if (fields.cvText) return "resume-text-too-long";
+  if (fields.minimumSalary || fields.maximumSalary) return "invalid-salary";
+  return "invalid-client";
 }
 
 export async function POST(request: NextRequest) {
@@ -97,14 +122,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!parsed.success) {
+      console.error("[/api/clients] Resume-only Zod failed:", JSON.stringify(parsed.error.flatten()));
       return redirectTo("/resumes?error=invalid-resume");
     }
 
     const { clientId, resumeName, fileUrl, resumeText, rewriteToolUrl } = parsed.data;
     const client = await prisma.clientProfile.findUnique({ where: { id: clientId }, select: { id: true } });
-    if (!client) {
-      return redirectTo("/resumes?error=client-not-found");
-    }
+    if (!client) return redirectTo("/resumes?error=client-not-found");
 
     await prisma.resume.create({
       data: {
@@ -120,6 +144,10 @@ export async function POST(request: NextRequest) {
     });
     return redirectTo("/resumes");
   }
+
+  // Normalize optional URLs before validation so missing https:// doesn't fail
+  const rawLinkedin = normalizeUrl(form.get("linkedinUrl") as string | null);
+  const rawGithub = normalizeUrl(form.get("githubUrl") as string | null);
 
   const parsed = ClientCreateSchema.safeParse({
     clientName: form.get("clientName") || undefined,
@@ -137,7 +165,8 @@ export async function POST(request: NextRequest) {
     maximumSalary: form.get("maximumSalary") || null,
     cvText: form.get("cvText") || null,
     resumeUrl: form.get("resumeUrl") || "",
-    linkedinUrl: form.get("linkedinUrl") || "",
+    linkedinUrl: rawLinkedin,
+    githubUrl: rawGithub,
     applicationNotes: form.get("applicationNotes") || null,
     keywordsInclude: form.get("keywordsInclude") || "",
     keywordsExclude: form.get("keywordsExclude") || "",
@@ -152,7 +181,6 @@ export async function POST(request: NextRequest) {
     addressState: form.get("addressState") || null,
     addressZip: form.get("addressZip") || null,
     addressCountry: form.get("addressCountry") || null,
-    githubUrl: form.get("githubUrl") || "",
     highestDegree: form.get("highestDegree") || null,
     fieldOfStudy: form.get("fieldOfStudy") || null,
     university: form.get("university") || null,
@@ -168,11 +196,38 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
+    const code = zodErrorCode(parsed.error);
     console.error("[/api/clients] Zod validation failed:", JSON.stringify(parsed.error.flatten()));
-    return redirectTo("/clients?error=invalid-client");
+    return redirectTo(`/clients?error=${code}&open=1`);
   }
 
   const data = parsed.data;
+
+  // Business rule: require at least one location (unless remote-only)
+  const hasLocation =
+    list(data.preferredCountries).length > 0 ||
+    list(data.preferredCities).length > 0 ||
+    list(data.preferredLocations).some(l => !l.toLowerCase().includes("remote")) ||
+    data.workModePreference === WorkMode.REMOTE;
+
+  if (!hasLocation) {
+    return redirectTo("/clients?error=no-location&open=1");
+  }
+
+  // Business rule: require at least one resume with text
+  let hasResumeText = false;
+  for (let i = 0; i < 3; i++) {
+    const rt = (form.get(`resumeText_${i}`) as string | null)?.trim();
+    if (rt) { hasResumeText = true; break; }
+  }
+  if (!hasResumeText && !data.cvText?.trim()) {
+    return redirectTo("/clients?error=no-resume-text&open=1");
+  }
+
+  // Check: file uploaded but no text (warn)
+  if (!hasResumeText && data.cvText?.trim()) {
+    // cvText covers it — OK
+  }
 
   if (data.teamMemberId) {
     const teamMember = await prisma.user.findFirst({
@@ -180,7 +235,7 @@ export async function POST(request: NextRequest) {
       select: { id: true }
     });
     if (!teamMember) {
-      return redirectTo("/clients?error=invalid-team-member");
+      return redirectTo("/clients?error=invalid-team-member&open=1");
     }
   }
 
@@ -188,7 +243,7 @@ export async function POST(request: NextRequest) {
   try {
     client = await prisma.clientProfile.create({
       data: {
-          clientName: data.clientName,
+        clientName: data.clientName,
         currentJobTitle: data.currentJobTitle,
         targetJobTitles: list(data.targetJobTitles),
         alternativeJobTitles: list(data.alternativeJobTitles),
@@ -217,7 +272,7 @@ export async function POST(request: NextRequest) {
         addressState: data.addressState || null,
         addressZip: data.addressZip || null,
         addressCountry: data.addressCountry || null,
-        githubUrl: data.githubUrl || null,
+        githubUrl: rawGithub || null,
         highestDegree: data.highestDegree || null,
         fieldOfStudy: data.fieldOfStudy || null,
         university: data.university || null,
@@ -234,28 +289,32 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[/api/clients] Prisma create failed:", err);
-    return redirectTo("/clients?error=db-error");
+    return redirectTo("/clients?error=db-error&open=1");
   }
 
   if (data.teamMemberId) {
     await prisma.clientAssignment.create({ data: { clientId: client.id, userId: data.teamMemberId } });
   }
 
-  // Create up to 3 resumes from the per-title resume sections
+  // Create resume records from per-title resume sections
   for (let i = 0; i < 3; i++) {
     const title = (form.get(`resumeTitle_${i}`) as string | null)?.trim();
     const fileValue = (form.get(`resumeFile_${i}`) as string | null)?.trim();
     const resumeText = (form.get(`resumeText_${i}`) as string | null)?.trim();
     if (!title && !fileValue && !resumeText) continue;
     const labelledTitle = title || `Resume ${i + 1}`;
-    await prisma.resume.create({
-      data: {
-        clientId: client.id,
-        name: labelledTitle,
-        fileUrl: fileValue && (fileValue.startsWith("data:") || fileValue.startsWith("http")) ? fileValue : null,
-        resumeText: resumeText || null,
-      }
-    });
+    try {
+      await prisma.resume.create({
+        data: {
+          clientId: client.id,
+          name: labelledTitle,
+          fileUrl: fileValue && (fileValue.startsWith("data:") || fileValue.startsWith("http")) ? fileValue : null,
+          resumeText: resumeText || null,
+        }
+      });
+    } catch (err) {
+      console.error(`[/api/clients] Failed to create resume ${i}:`, err);
+    }
   }
 
   await prisma.auditLog.create({

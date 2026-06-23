@@ -19,6 +19,11 @@ export function TagInput({ name, defaultValue = "", placeholder = "Type and pres
   const [tags, setTags] = useState<string[]>(initial);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const hiddenRef = useRef<HTMLInputElement>(null);
+
+  function syncHidden(next: string[]) {
+    if (hiddenRef.current) hiddenRef.current.value = next.join(", ");
+  }
 
   function addTag(raw: string) {
     const val = raw.trim();
@@ -26,6 +31,7 @@ export function TagInput({ name, defaultValue = "", placeholder = "Type and pres
       const next = [...tags, val];
       setTags(next);
       onTagsChange?.(next);
+      syncHidden(next);
     }
     setInput("");
   }
@@ -34,6 +40,7 @@ export function TagInput({ name, defaultValue = "", placeholder = "Type and pres
     const next = tags.filter((t) => t !== tag);
     setTags(next);
     onTagsChange?.(next);
+    syncHidden(next);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -41,7 +48,10 @@ export function TagInput({ name, defaultValue = "", placeholder = "Type and pres
       e.preventDefault();
       addTag(input);
     } else if (e.key === "Backspace" && input === "" && tags.length > 0) {
-      setTags((prev) => prev.slice(0, -1));
+      const next = tags.slice(0, -1);
+      setTags(next);
+      onTagsChange?.(next);
+      syncHidden(next);
     }
   }
 
@@ -62,9 +72,8 @@ export function TagInput({ name, defaultValue = "", placeholder = "Type and pres
 
   return (
     <div className={className}>
-      {/* Hidden input carries the comma-separated value for form submission */}
-      <input type="hidden" name={name} value={tags.join(", ")} />
-      {/* Validation shim — required triggers if tags is empty */}
+      {/* Uncontrolled hidden input — updated imperatively so value is always current at submit time */}
+      <input ref={hiddenRef} type="hidden" name={name} defaultValue={initial.join(", ")} />
       {required && (
         <input
           tabIndex={-1}
@@ -107,7 +116,7 @@ export function TagInput({ name, defaultValue = "", placeholder = "Type and pres
           className="flex-1 min-w-[120px] bg-transparent text-sm text-ink outline-none placeholder:text-muted"
         />
       </div>
-      <p className="mt-1 text-xs text-muted">Press Enter or comma to add each item</p>
+      <p className="mt-1 text-xs text-muted">Press Enter or comma to add · Typed text is saved automatically when you submit</p>
     </div>
   );
 }
