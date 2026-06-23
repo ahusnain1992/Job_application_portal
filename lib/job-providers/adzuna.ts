@@ -20,10 +20,10 @@ export class AdzunaJobProvider implements JobProvider {
     // Falls back to constructor default (us) if not recognised.
     const countryCode = resolveAdzunaCountry(search.countries) || this.country;
 
-    // For remote-only clients, search Adzuna with where=remote so we get
-    // genuinely remote listings rather than fetching onsite jobs and discarding them.
+    // For remote-only clients, search without a location filter so Adzuna
+    // returns all jobs in the country — post-fetch filter keeps only remote/flexible.
     const searchLocations = search.remoteOnly
-      ? ["remote"]
+      ? [""]
       : (search.locations.length ? search.locations : [""]).slice(0, 2);
 
     for (const title of search.titles.slice(0, 3)) {
