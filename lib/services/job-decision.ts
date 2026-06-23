@@ -8,7 +8,7 @@
  *
  * Rule summary:
  *   matchScore < 45  → "do-not-apply" (or "wrong-location" if location warning)
- *   matchScore 45-69 → "tailor-resume" / "rewrite-resume" (never apply-as-is)
+ *   matchScore 45-69 → apply-as-is (if resume=AS_IS) / tailor / rewrite
  *   matchScore 70+   → check resume: apply-as-is / tailor / rewrite / find-apply-link
  *   No resume text   → "missing-resume-text" (can't make a good decision)
  *   No applyUrl      → "find-apply-link" (only matters when would otherwise apply)
@@ -101,11 +101,14 @@ export function deriveJobDecision(params: {
   } else if (!resumeRecommendation) {
     nextAction = "missing-resume-text";
   } else if (matchScore < HIGH_MATCH) {
-    // Medium match — never recommend applying as-is
-    nextAction =
-      resumeRecommendation === "FULL_REWRITE" || resumeRecommendation === "NEW_VERSION"
-        ? "rewrite-resume"
-        : "tailor-resume";
+    // Medium match — if resume already covers all keywords, let them apply as-is
+    if (resumeRecommendation === "AS_IS") {
+      nextAction = applyUrl ? "apply-as-is" : "find-apply-link";
+    } else if (resumeRecommendation === "FULL_REWRITE" || resumeRecommendation === "NEW_VERSION") {
+      nextAction = "rewrite-resume";
+    } else {
+      nextAction = "tailor-resume";
+    }
   } else {
     // High match (70%+)
     if (resumeRecommendation === "AS_IS") {
