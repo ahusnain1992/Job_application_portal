@@ -58,5 +58,5 @@ export async function POST(
     }
   });
 
-  return NextResponse.json({ ok: true, clientName: client.clientName, ...summary });
+  return NextResponse.json({ ok: true, clientName: client.clientName, ...summary, providerStats: summary.providerStats });
 }

@@ -32,14 +32,16 @@ export type FetchSummary = {
   jobsFetched: number;
   jobsSaved: number;
   duplicatesSkipped: number;
+  noApplyLink: number;
   errors: string[];
+  providerStats: Record<string, { fetched: number; error?: string }>;
 };
 
 export async function fetchJobsForClient(
   client: ClientWithResumes,
   options: { postedWithinDays?: number } = {}
 ): Promise<FetchSummary> {
-  const summary: FetchSummary = { jobsFetched: 0, jobsSaved: 0, duplicatesSkipped: 0, errors: [] };
+  const summary: FetchSummary = { jobsFetched: 0, jobsSaved: 0, duplicatesSkipped: 0, noApplyLink: 0, errors: [], providerStats: {} };
 
   const providers = buildProviders();
 
@@ -60,15 +62,22 @@ export async function fetchJobsForClient(
       console.log(`[fetch-jobs] ${provider.name} returned ${jobs.length} jobs`);
       allJobs.push(...jobs);
       summary.jobsFetched += jobs.length;
+      summary.providerStats[provider.name] = { fetched: jobs.length };
     } catch (err) {
-      const msg = `${provider.name}: ${String(err)}`;
-      console.error(`[fetch-jobs] Provider error — ${msg}`);
-      summary.errors.push(msg);
+      const msg = String(err);
+      console.error(`[fetch-jobs] Provider error — ${provider.name}: ${msg}`);
+      summary.errors.push(`${provider.name}: ${msg}`);
+      summary.providerStats[provider.name] = { fetched: 0, error: msg };
     }
   }
 
-  const relevantJobs = allJobs.filter((job) => isJobRelevant(job, client));
-  summary.jobsFetched -= allJobs.length - relevantJobs.length;
+  // Filter: must match client preferences AND have an apply link
+  const relevantJobs = allJobs.filter((job) => {
+    if (!isJobRelevant(job, client)) return false;
+    if (!job.applyUrl?.trim()) { summary.noApplyLink++; return false; }
+    return true;
+  });
+  summary.jobsFetched -= (allJobs.length - relevantJobs.length - summary.noApplyLink);
 
   await ensureSources(providers.map((p) => p.name));
   const sourceMap = Object.fromEntries(

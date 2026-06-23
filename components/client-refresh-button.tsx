@@ -28,8 +28,13 @@ export function ClientRefreshButton({ clientId, clientName }: { clientId: string
         return;
       }
       setState("success");
-      setMessage(`${data.jobsSaved ?? 0} new jobs found for ${clientName}`);
-      setTimeout(() => window.location.reload(), 1500);
+      const providerLines = data.providerStats
+        ? Object.entries(data.providerStats as Record<string, { fetched: number; error?: string }>)
+            .map(([n, s]) => s.error ? `${n}:❌` : `${n}:${s.fetched}`)
+            .join(" | ")
+        : "";
+      setMessage(`${data.jobsSaved ?? 0} saved · ${data.noApplyLink ?? 0} no-link skipped${providerLines ? " — " + providerLines : ""}`);
+      setTimeout(() => window.location.reload(), 2500);
     } catch {
       setState("error");
       setMessage("Network error — try again");

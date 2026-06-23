@@ -398,23 +398,24 @@ export function AddClientForm({ teamMembers }: AddClientFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
-            Industries preferred <span className="text-muted font-normal">(e.g. IT, FinTech, Healthcare)</span>
+            Industry background <span className="text-muted font-normal">(industries where they have IT experience)</span>
           </label>
           <input
             name="industriesPreferred"
             type="text"
-            placeholder="e.g. Information Technology, FinTech, SaaS"
+            placeholder="e.g. FinTech, Healthcare IT, E-commerce, SaaS"
             className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
           />
+          <p className="mt-1 text-xs text-muted">Used for context only — jobs from all industries are fetched as long as the role and skills match.</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
-            Industries to avoid
+            Sectors to avoid <span className="text-muted font-normal">(optional)</span>
           </label>
           <input
             name="industriesToAvoid"
             type="text"
-            placeholder="e.g. Oil & Gas, Manufacturing, Automotive"
+            placeholder="e.g. Oil & Gas, Defence, Gambling"
             className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
           />
         </div>
