@@ -44,7 +44,7 @@ export class LinkedInJobProvider implements JobProvider {
           proxy: { useApifyProxy: true }
         };
 
-        console.log(`[linkedin] Fetching: ${searchUrl}`);
+        console.log(`[linkedin] Fetching: "${title}" in "${locationPart}"`);
         const res = await fetch(
           `https://api.apify.com/v2/acts/bebity~linkedin-jobs-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=90`,
           {
