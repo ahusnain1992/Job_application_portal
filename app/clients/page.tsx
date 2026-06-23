@@ -21,6 +21,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "invalid-salary": "Salary must be a valid number.",
   "resume-text-too-long": "Resume/CV text is too long. Please shorten it or split it into separate resume versions.",
   "invalid-team-member": "The selected team member was not found. They may have been deactivated.",
+  "location-too-long": "Location selection is too long. Please reduce the number of cities or countries selected.",
+  "field-too-long": "One of the text fields is too long. Please shorten it and try again.",
   "invalid-client": "Some fields have errors. Please check the form and try again.",
   "db-error": "A database error occurred. Our team has been notified — please try again in a moment.",
 };

@@ -24,9 +24,9 @@ const ClientCreateSchema = z.object({
   alternativeJobTitles: z.string().max(1000).optional(),
   mainSkills: z.string().min(1, "At least one main skill is required").max(2000),
   secondarySkills: z.string().max(2000).optional(),
-  preferredLocations: z.string().max(1000).optional().default(""),
-  preferredCountries: z.string().max(500).optional().default(""),
-  preferredCities: z.string().max(500).optional().default(""),
+  preferredLocations: z.string().max(5000).optional().default(""),
+  preferredCountries: z.string().max(2000).optional().default(""),
+  preferredCities: z.string().max(5000).optional().default(""),
   workModePreference: z.nativeEnum(WorkMode),
   employmentTypePreference: z.nativeEnum(EmploymentType),
   minimumSalary: z.coerce.number().int().min(0).max(10_000_000).optional().nullable(),
@@ -104,6 +104,8 @@ function zodErrorCode(error: z.ZodError): string {
   if (fields.personalEmail) return "invalid-email";
   if (fields.cvText) return "resume-text-too-long";
   if (fields.minimumSalary || fields.maximumSalary) return "invalid-salary";
+  if (fields.preferredCities || fields.preferredCountries || fields.preferredLocations) return "location-too-long";
+  if (fields.alternativeJobTitles || fields.secondarySkills || fields.keywordsInclude || fields.keywordsExclude) return "field-too-long";
   return "invalid-client";
 }
 
