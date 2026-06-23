@@ -33,12 +33,14 @@ export class LinkedInJobProvider implements JobProvider {
 
     for (const title of search.titles.slice(0, 2)) {
       try {
-        const locationPart = search.locations?.[0] || search.countries?.[0] || "United States";
-        // No f_LF=f_AL — that filter restricts to Easy Apply only (we want the opposite)
-        const searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}&location=${encodeURIComponent(locationPart)}&position=1&pageNum=0`;
+        const locationPart = search.remoteOnly
+          ? "Remote"
+          : (search.locations?.[0] || search.countries?.[0] || "United States");
+        // Use structured input (current actor API format)
         const input: Record<string, unknown> = {
-          searchUrl,
-          resultsLimit: 25,
+          title,
+          location: locationPart,
+          rows: 25,
           proxy: { useApifyProxy: true }
         };
 
