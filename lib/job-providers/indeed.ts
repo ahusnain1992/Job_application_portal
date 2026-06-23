@@ -45,12 +45,12 @@ export class IndeedJobProvider implements JobProvider {
 
         console.log(`[indeed] Searching: ${title} in ${location}`);
         const res = await fetch(
-          `https://api.apify.com/v2/acts/misceres~indeed-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=300`,
+          `https://api.apify.com/v2/acts/misceres~indeed-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=90`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
-            signal: AbortSignal.timeout(360000)
+            signal: AbortSignal.timeout(120000)
           }
         );
 

@@ -40,12 +40,12 @@ export class GlassdoorJobProvider implements JobProvider {
 
         console.log(`[glassdoor] Searching: ${title} in ${location}`);
         const res = await fetch(
-          `https://api.apify.com/v2/acts/bebity~glassdoor-jobs-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=300`,
+          `https://api.apify.com/v2/acts/bebity~glassdoor-jobs-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=90`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
-            signal: AbortSignal.timeout(360000)
+            signal: AbortSignal.timeout(120000)
           }
         );
 
