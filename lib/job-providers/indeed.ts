@@ -97,17 +97,19 @@ export class IndeedJobProvider implements JobProvider {
 
 function resolveIndeedCountry(countries: string[]): string {
   const map: Record<string, string> = {
-    usa: "us", "united states": "us",
-    uk: "gb", "united kingdom": "gb",
-    canada: "ca", australia: "au",
-    germany: "de", france: "fr",
-    india: "in", netherlands: "nl"
+    usa: "US", "united states": "US",
+    uk: "GB", "united kingdom": "GB",
+    canada: "CA", australia: "AU",
+    germany: "DE", france: "FR",
+    india: "IN", netherlands: "NL",
+    pakistan: "PK", "united arab emirates": "AE", uae: "AE",
+    singapore: "SG", ireland: "IE", "new zealand": "NZ",
   };
   for (const c of countries) {
     const code = map[c.toLowerCase()];
     if (code) return code;
   }
-  return "us";
+  return "US";
 }
 
 function inferWorkMode(location: string): WorkMode {
