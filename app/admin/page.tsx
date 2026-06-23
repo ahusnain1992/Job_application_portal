@@ -79,7 +79,13 @@ export default async function AdminDashboard() {
       take: 10,
       orderBy: [{ matchScore: "desc" }, { discoveredAt: "desc" }],
       where: { status: { in: [JobStatus.SUGGESTED, JobStatus.APPROVED, JobStatus.ASSIGNED] } },
-      include: { client: { select: { clientName: true } } }
+      select: {
+        id: true, title: true, companyName: true, location: true, workMode: true,
+        status: true, matchScore: true, sourceName: true, postedDate: true,
+        applyUrl: true, salaryMin: true, salaryMax: true, duplicateGroupId: true,
+        resumeRecommendation: true, resumeCoverageScore: true, matchWarnings: true,
+        client: { select: { clientName: true } }
+      }
     }),
 
     prisma.user.findMany({

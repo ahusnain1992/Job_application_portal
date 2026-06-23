@@ -1,34 +1,17 @@
 import Link from "next/link";
 import { JobStatus, Role, WorkMode } from "@prisma/client";
-import { BriefcaseBusiness, MapPin, Banknote, Clock, Sparkles } from "lucide-react";
+import { BriefcaseBusiness, MapPin, Banknote, Clock, Sparkles, FileText } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { Badge, MetricCard, Panel } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { money, workModeLabel } from "@/lib/format";
 import { QueueRefresh } from "@/components/queue-refresh";
-
-// Non-technical queue labels for employees
-function queueLabel(rec: string | null, score: number, hasUrl: boolean): {
-  label: string;
-  tone: "brand" | "signal" | "warn" | "neutral";
-  priority: number;
-} {
-  if (!hasUrl) return { label: "Missing link", tone: "neutral", priority: 4 };
-  if (rec === "FULL_REWRITE" || rec === "NEW_VERSION") return { label: "Needs Resume Rewrite", tone: "warn", priority: 2 };
-  if (score >= 65 && (rec === "AS_IS" || rec === "MINOR_TAILORING" || rec === null)) return { label: "Apply Now", tone: "brand", priority: 0 };
-  if (score >= 45) return { label: "Ready to Apply", tone: "signal", priority: 1 };
-  return { label: "Review Required", tone: "neutral", priority: 3 };
-}
+import { jobDecisionFromRow, JobDecision, NextAction } from "@/lib/services/job-decision";
 
 const WORKABLE_STATUSES: JobStatus[] = [
-  JobStatus.NEW,
-  JobStatus.SUGGESTED,
-  JobStatus.APPROVED,
-  JobStatus.ASSIGNED,
-  JobStatus.OPENED,
-  JobStatus.IN_PROGRESS,
-  JobStatus.SAVED_FOR_LATER,
+  JobStatus.NEW, JobStatus.SUGGESTED, JobStatus.APPROVED, JobStatus.ASSIGNED,
+  JobStatus.OPENED, JobStatus.IN_PROGRESS, JobStatus.SAVED_FOR_LATER,
   JobStatus.FOLLOW_UP_NEEDED,
 ];
 
@@ -62,22 +45,12 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
         status: { in: WORKABLE_STATUSES }
       },
       select: {
-        id: true,
-        title: true,
-        companyName: true,
-        location: true,
-        workMode: true,
-        salaryMin: true,
-        salaryMax: true,
-        matchScore: true,
-        matchWarnings: true,
-        resumeRecommendation: true,
-        applyUrl: true,
-        status: true,
-        discoveredAt: true,
-        openedAt: true,
-        openedById: true,
-        lockExpiresAt: true,
+        id: true, title: true, companyName: true, location: true, workMode: true,
+        salaryMin: true, salaryMax: true, matchScore: true, matchWarnings: true,
+        resumeRecommendation: true, resumeCoverageScore: true,
+        applyUrl: true, status: true, discoveredAt: true,
+        openedAt: true, openedById: true, lockExpiresAt: true,
+        bestResumeName: true,
         client: { select: { clientName: true } },
         assignments: { select: { user: { select: { name: true } } } }
       },
@@ -106,18 +79,35 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
     })
   ]);
 
-  // Sort by queue priority, then match score
-  const sorted = [...jobs].sort((a, b) => {
-    const pa = queueLabel(a.resumeRecommendation, a.matchScore, !!a.applyUrl).priority;
-    const pb = queueLabel(b.resumeRecommendation, b.matchScore, !!b.applyUrl).priority;
-    if (pa !== pb) return pa - pb;
+  // Derive decision for each job using the shared helper
+  const jobsWithDecision = jobs.map((job) => ({
+    ...job,
+    decision: jobDecisionFromRow({
+      matchScore: job.matchScore,
+      resumeRecommendation: job.resumeRecommendation,
+      resumeCoverageScore: job.resumeCoverageScore,
+      applyUrl: job.applyUrl,
+      matchWarnings: job.matchWarnings,
+    }),
+  }));
+
+  // Sort by queue priority (lower = better), then match score
+  const sorted = [...jobsWithDecision].sort((a, b) => {
+    if (a.decision.queuePriority !== b.decision.queuePriority) {
+      return a.decision.queuePriority - b.decision.queuePriority;
+    }
     return b.matchScore - a.matchScore;
   });
 
-  const applyNow = sorted.filter((j) => queueLabel(j.resumeRecommendation, j.matchScore, !!j.applyUrl).priority === 0);
-  const readyToApply = sorted.filter((j) => queueLabel(j.resumeRecommendation, j.matchScore, !!j.applyUrl).priority === 1);
-  const needsRewrite = sorted.filter((j) => queueLabel(j.resumeRecommendation, j.matchScore, !!j.applyUrl).priority === 2);
-  const reviewRequired = sorted.filter((j) => queueLabel(j.resumeRecommendation, j.matchScore, !!j.applyUrl).priority >= 3);
+  const applyNow     = sorted.filter((j) => j.decision.nextAction === "apply-as-is");
+  const tailorFirst  = sorted.filter((j) => j.decision.nextAction === "tailor-resume");
+  const needsRewrite = sorted.filter((j) => j.decision.nextAction === "rewrite-resume");
+  const blocked      = sorted.filter((j) =>
+    j.decision.nextAction === "find-apply-link" || j.decision.nextAction === "missing-resume-text"
+  );
+  const doNotApply   = sorted.filter((j) =>
+    j.decision.nextAction === "do-not-apply" || j.decision.nextAction === "wrong-location"
+  );
 
   const dailyTargetNum = dailyTarget?.target ?? 30;
 
@@ -128,25 +118,25 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-4 min-w-0">
         <div>
           <div className="text-sm font-medium uppercase tracking-wide text-brand">Today&apos;s work</div>
-          <h1 className="mt-1 text-2xl font-semibold text-ink">Application Queue</h1>
+          <h1 className="mt-1 text-2xl font-semibold text-ink">My Work Queue</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {user.role === Role.ADMIN && clients.length > 0 && (
-          <form className="flex items-center gap-2">
-            <select
-              name="clientId"
-              defaultValue={searchParams.clientId || ""}
-              className="focus-ring h-9 rounded-md border border-line bg-white px-3 text-sm text-ink"
-            >
-              <option value="">All clients</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.clientName}</option>
-              ))}
-            </select>
-            <button className="focus-ring h-9 rounded-md border border-line bg-white px-3 text-sm font-medium text-ink hover:bg-canvas">
-              Filter
-            </button>
-          </form>
+            <form className="flex items-center gap-2">
+              <select
+                name="clientId"
+                defaultValue={searchParams.clientId || ""}
+                className="focus-ring h-9 rounded-md border border-line bg-white px-3 text-sm text-ink"
+              >
+                <option value="">All clients</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>{c.clientName}</option>
+                ))}
+              </select>
+              <button className="focus-ring h-9 rounded-md border border-line bg-white px-3 text-sm font-medium text-ink hover:bg-canvas">
+                Filter
+              </button>
+            </form>
           )}
         </div>
       </div>
@@ -154,7 +144,7 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
       {newJobsCount > 0 && (
         <div className="mb-6 flex items-center gap-2 rounded-md border border-brand/30 bg-[#ECF7F4] px-4 py-3 text-sm text-[#186A5E]">
           <Sparkles size={15} />
-          <span><strong>{newJobsCount} new job{newJobsCount !== 1 ? "s" : ""}</strong> added in the last 24 hours — check the top of each section.</span>
+          <span><strong>{newJobsCount} new job{newJobsCount !== 1 ? "s" : ""}</strong> added in the last 24 hours.</span>
         </div>
       )}
 
@@ -165,7 +155,7 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
           value={appliedToday}
           tone="brand"
         />
-        <MetricCard label="Jobs in queue" value={jobs.length} tone="signal" />
+        <MetricCard label="Ready to apply now" value={applyNow.length} tone={applyNow.length > 0 ? "brand" : "neutral"} />
         {user.role !== Role.ADMIN ? (
           <MetricCard
             label={`Daily target (${dailyTargetNum} apps)`}
@@ -173,7 +163,7 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
             tone={appliedToday >= dailyTargetNum ? "brand" : "neutral"}
           />
         ) : (
-          <MetricCard label="Apply Now ready" value={applyNow.length} tone={applyNow.length > 0 ? "brand" : "neutral"} />
+          <MetricCard label="Jobs in queue" value={jobs.length} tone="signal" />
         )}
       </div>
 
@@ -191,36 +181,43 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
         <div className="space-y-10">
           <QueueSection
             title="Apply Now"
-            subtitle="Strong match — resume is ready to go"
-            count={applyNow.length}
+            subtitle="Strong match — resume is ready, go apply"
             color="green"
             jobs={applyNow}
             showClient={user.role === Role.ADMIN}
           />
           <QueueSection
-            title="Ready to Apply"
-            subtitle="Good match — review the job before opening"
-            count={readyToApply.length}
+            title="Tailor Resume First"
+            subtitle="Good match — make small resume adjustments before applying"
             color="blue"
-            jobs={readyToApply}
+            jobs={tailorFirst}
             showClient={user.role === Role.ADMIN}
           />
           <QueueSection
-            title="Needs Resume Rewrite"
-            subtitle="Send to resume builder before applying"
-            count={needsRewrite.length}
+            title="Resume Rewrite Needed"
+            subtitle="Send to resume builder — do not apply until rewrite is done"
             color="orange"
             jobs={needsRewrite}
             showClient={user.role === Role.ADMIN}
           />
-          <QueueSection
-            title="Review Required"
-            subtitle="Lower match — check with admin before applying"
-            count={reviewRequired.length}
-            color="gray"
-            jobs={reviewRequired}
-            showClient={user.role === Role.ADMIN}
-          />
+          {blocked.length > 0 && (
+            <QueueSection
+              title="Blocked — Needs Info"
+              subtitle="Missing apply link or resume text — admin action needed"
+              color="gray"
+              jobs={blocked}
+              showClient={user.role === Role.ADMIN}
+            />
+          )}
+          {(user.role === Role.ADMIN) && doNotApply.length > 0 && (
+            <QueueSection
+              title="Poor Match — Do Not Apply"
+              subtitle="Below minimum match threshold or wrong location"
+              color="red"
+              jobs={doNotApply}
+              showClient={true}
+            />
+          )}
         </div>
       )}
     </AppShell>
@@ -240,37 +237,34 @@ type QueueJob = {
   applyUrl: string | null;
   status: JobStatus;
   matchWarnings: string[];
+  bestResumeName: string | null;
   client: { clientName: string };
   assignments: { user: { name: string } }[];
+  decision: JobDecision;
 };
 
 function QueueSection({
-  title,
-  subtitle,
-  count,
-  color,
-  jobs,
-  showClient
+  title, subtitle, color, jobs, showClient
 }: {
   title: string;
   subtitle: string;
-  count: number;
-  color: "green" | "blue" | "orange" | "gray";
+  color: "green" | "blue" | "orange" | "gray" | "red";
   jobs: QueueJob[];
   showClient: boolean;
 }) {
-  if (count === 0) return null;
+  if (jobs.length === 0) return null;
   const dotColors = {
     green: "bg-brand",
     blue: "bg-blue-600",
     orange: "bg-warn",
-    gray: "bg-gray-400"
+    gray: "bg-gray-400",
+    red: "bg-red-500",
   };
   return (
     <section>
       <div className="mb-4 flex items-center gap-3">
         <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white ${dotColors[color]}`}>
-          {count}
+          {jobs.length}
         </span>
         <div>
           <div className="font-semibold text-ink">{title}</div>
@@ -287,25 +281,25 @@ function QueueSection({
 }
 
 function QueueCard({ job, showClient }: { job: QueueJob; showClient: boolean }) {
-  const ql = queueLabel(job.resumeRecommendation, job.matchScore, !!job.applyUrl);
+  const { decision } = job;
 
   return (
     <Link
       href={`/jobs/${job.id}`}
       className="group block w-full min-w-0 rounded-lg border border-line bg-white p-3 sm:p-4 shadow-panel transition-all hover:border-brand/50 hover:shadow-md overflow-hidden"
     >
-      {/* Header row: company + badge */}
+      {/* Header row: company + next-action badge */}
       <div className="flex items-start gap-2 min-w-0">
         <div className="min-w-0 flex-1 overflow-hidden">
           <div className="truncate font-semibold text-ink group-hover:text-brand text-sm sm:text-base">{job.companyName}</div>
           <div className="mt-0.5 truncate text-xs sm:text-sm text-muted">{job.title}</div>
         </div>
         <div className="shrink-0">
-          <Badge tone={ql.tone}>{ql.label}</Badge>
+          <Badge tone={decision.actionTone}>{decision.actionLabel}</Badge>
         </div>
       </div>
 
-      {/* Meta row: location, work mode, salary — each truncated */}
+      {/* Meta row */}
       <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted sm:flex-row sm:flex-wrap sm:gap-x-3 sm:gap-y-1">
         <span className="flex items-center gap-1 truncate">
           <MapPin size={10} className="shrink-0" />
@@ -321,15 +315,32 @@ function QueueCard({ job, showClient }: { job: QueueJob; showClient: boolean }) 
         )}
       </div>
 
-      {/* Footer row: match score + client/status */}
+      {/* Recommended resume name */}
+      {job.bestResumeName && decision.nextAction === "apply-as-is" && (
+        <div className="mt-2 flex items-center gap-1 text-xs text-brand truncate">
+          <FileText size={10} className="shrink-0" />
+          <span className="truncate">Use: {job.bestResumeName}</span>
+        </div>
+      )}
+
+      {/* Footer: job fit + client/status */}
       <div className="mt-2 flex items-center justify-between gap-2 min-w-0">
-        <span
-          className={`shrink-0 text-sm font-semibold ${
-            job.matchScore >= 75 ? "text-brand" : job.matchScore >= 55 ? "text-blue-600" : "text-muted"
-          }`}
-        >
-          {job.matchScore}% match
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-sm font-semibold ${
+            decision.jobFitLabel === "High" ? "text-brand"
+            : decision.jobFitLabel === "Medium" ? "text-blue-600"
+            : "text-muted"
+          }`}>
+            {job.matchScore}%
+          </span>
+          <span className={`text-xs ${
+            decision.jobFitLabel === "High" ? "text-brand"
+            : decision.jobFitLabel === "Medium" ? "text-blue-600"
+            : "text-muted"
+          }`}>
+            {decision.jobFitLabel} fit
+          </span>
+        </div>
         <div className="flex min-w-0 items-center gap-2">
           {showClient && (
             <span className="truncate text-xs text-muted max-w-[120px]">{job.client.clientName}</span>
@@ -342,7 +353,7 @@ function QueueCard({ job, showClient }: { job: QueueJob; showClient: boolean }) 
         </div>
       </div>
 
-      {/* Warning — capped at one line on mobile */}
+      {/* Warning — capped to one line */}
       {job.matchWarnings.length > 0 && (
         <div className="mt-2 rounded bg-[#FFF6EB] px-2 py-1 text-xs text-[#8A4604] line-clamp-2">
           ⚠ {job.matchWarnings[0]}

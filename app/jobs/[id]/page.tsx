@@ -14,6 +14,7 @@ import { money, relativeDate, shortDate, statusLabel, workModeLabel } from "@/li
 import { requireUser, requireClientAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { htmlToText } from "@/lib/sanitize";
+import { deriveJobDecision } from "@/lib/services/job-decision";
 
 export default async function JobDetailPage({
   params,
@@ -91,7 +92,14 @@ export default async function JobDetailPage({
     job.lockExpiresAt > new Date() &&
     job.openedById !== user.id;
 
-  const needsResumeWork = job.resumeRecommendation === "FULL_REWRITE" || job.resumeRecommendation === "NEW_VERSION";
+  const jobDecision = deriveJobDecision({
+    matchScore: job.matchScore,
+    resumeRecommendation: job.resumeRecommendation,
+    resumeCoverageScore: job.resumeCoverageScore,
+    applyUrl: job.applyUrl,
+    matchWarnings: job.matchWarnings,
+  });
+  const needsResumeWork = jobDecision.needsRewrite;
   const hasWebhook = !!process.env.N8N_RESUME_WEBHOOK_URL;
 
   // Use only the AI-matched best resume — no fallback guessing
@@ -222,9 +230,21 @@ export default async function JobDetailPage({
 
       {/* Status badges */}
       <div className="mb-6 flex flex-wrap gap-2">
-        <Badge tone={job.matchScore >= 75 ? "brand" : job.matchScore >= 55 ? "signal" : "warn"}>
-          {job.matchScore}% match
+        {/* Combined decision — the single source of truth */}
+        <Badge tone={jobDecision.actionTone}>
+          {jobDecision.actionLabel}
         </Badge>
+        {/* Job fit */}
+        <Badge tone={jobDecision.jobFitLabel === "High" ? "brand" : jobDecision.jobFitLabel === "Medium" ? "signal" : "neutral"}>
+          {job.matchScore}% — {jobDecision.jobFitLabel} fit
+        </Badge>
+        {/* Resume fit */}
+        {jobDecision.resumeFitLabel !== "Missing" && (
+          <Badge tone={jobDecision.resumeFitLabel === "Strong" ? "brand" : jobDecision.resumeFitLabel === "Medium" ? "signal" : "warn"}>
+            Resume: {jobDecision.resumeFitLabel}
+            {job.resumeCoverageScore != null ? ` (${job.resumeCoverageScore}%)` : ""}
+          </Badge>
+        )}
         <Badge tone={
           job.status === JobStatus.APPLIED ? "brand"
           : job.status === JobStatus.IN_PROGRESS ? "signal"
@@ -242,11 +262,6 @@ export default async function JobDetailPage({
           <span className="inline-flex items-center gap-1 rounded bg-[#DDF3ED] px-2 py-1 text-xs font-semibold text-[#14544B]">
             <ShieldCheck size={11} /> Gmail verified
           </span>
-        )}
-        {needsResumeWork && (
-          <Badge tone="warn">
-            {job.resumeRecommendation === "NEW_VERSION" ? "📄 Needs new resume version" : "🔄 Resume rewrite needed"}
-          </Badge>
         )}
       </div>
 
@@ -269,7 +284,11 @@ export default async function JobDetailPage({
           </Panel>
 
           {/* Resume decision */}
-          <ResumeRecommendationPanel job={job} />
+          <ResumeRecommendationPanel
+            job={job}
+            matchScore={job.matchScore}
+            matchWarnings={job.matchWarnings}
+          />
 
           {/* Resume recommendation — best master resume or AI rewrite */}
           <BestResumePanel job={job} />
@@ -466,15 +485,10 @@ export default async function JobDetailPage({
   );
 }
 
-const REC_CONFIG = {
-  AS_IS: { bg: "bg-[#ECF7F4]", border: "border-brand/30", text: "text-[#186A5E]", label: "✅ Good news — apply with the current resume" },
-  MINOR_TAILORING: { bg: "bg-[#EEF5FF]", border: "border-signal/30", text: "text-[#1D4ED8]", label: "✏️ Small tweaks recommended before applying" },
-  FULL_REWRITE: { bg: "bg-[#FFF6EB]", border: "border-warn/30", text: "text-[#8A4604]", label: "🔄 Resume needs a rewrite — use resume builder first" },
-  NEW_VERSION: { bg: "bg-red-50", border: "border-red-200", text: "text-red-700", label: "📄 Need a new resume version for this type of role" },
-} as const;
-
 function ResumeRecommendationPanel({
-  job
+  job,
+  matchScore,
+  matchWarnings,
 }: {
   job: {
     resumeRecommendation: string | null;
@@ -482,40 +496,49 @@ function ResumeRecommendationPanel({
     missingKeywords: string[];
     coveredKeywords: string[];
     resumeClusterId: string | null;
+    applyUrl: string | null;
   };
+  matchScore: number;
+  matchWarnings: string[];
 }) {
-  if (!job.resumeRecommendation) return null;
-  const cfg = REC_CONFIG[job.resumeRecommendation as keyof typeof REC_CONFIG];
-  if (!cfg) return null;
+  const decision = deriveJobDecision({
+    matchScore,
+    resumeRecommendation: job.resumeRecommendation,
+    resumeCoverageScore: job.resumeCoverageScore,
+    applyUrl: job.applyUrl,
+    matchWarnings,
+  });
+
+  const bannerStyle = {
+    "apply-as-is":        { bg: "bg-[#ECF7F4]", border: "border-brand/30",    text: "text-[#186A5E]",  emoji: "✅", headline: "Ready to apply — use the current resume" },
+    "tailor-resume":      { bg: "bg-[#EEF5FF]", border: "border-signal/30",   text: "text-[#1D4ED8]",  emoji: "✏️", headline: "Tailor the resume before applying" },
+    "rewrite-resume":     { bg: "bg-[#FFF6EB]", border: "border-warn/30",     text: "text-[#8A4604]",  emoji: "🔄", headline: "Resume needs a rewrite — use resume builder first" },
+    "find-apply-link":    { bg: "bg-canvas",     border: "border-line",        text: "text-ink",        emoji: "🔗", headline: "Good match — but no apply link found yet" },
+    "missing-resume-text":{ bg: "bg-canvas",     border: "border-line",        text: "text-muted",      emoji: "📄", headline: "No resume text on file — job matching unavailable" },
+    "do-not-apply":       { bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700",    emoji: "✗",  headline: "Poor overall match — do not apply" },
+    "wrong-location":     { bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700",    emoji: "📍", headline: "Location does not match client preferences" },
+  } as const;
+
+  const style = bannerStyle[decision.nextAction];
 
   return (
-    <Panel title="Resume decision">
-      <div className={`rounded-md border ${cfg.border} ${cfg.bg} px-4 py-3`}>
-        <div className={`font-semibold text-sm ${cfg.text}`}>{cfg.label}</div>
-        {job.resumeCoverageScore !== null && (
-          <div className="mt-3">
-            <div className="flex justify-between text-xs text-muted mb-1">
-              <span>How much of the job requirements are already in the resume</span>
-              <span className="font-semibold">{job.resumeCoverageScore}%</span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-white/60 border border-white">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  job.resumeCoverageScore >= 75 ? "bg-brand"
-                  : job.resumeCoverageScore >= 55 ? "bg-blue-500"
-                  : "bg-warn"
-                }`}
-                style={{ width: `${job.resumeCoverageScore}%` }}
-              />
-            </div>
-          </div>
-        )}
+    <Panel title="Next action">
+      <div className={`rounded-md border ${style.border} ${style.bg} px-4 py-3`}>
+        <div className={`font-semibold text-sm ${style.text}`}>
+          {style.emoji} {style.headline}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted">
+          <span>Job fit: <strong className={decision.jobFitLabel === "High" ? "text-brand" : decision.jobFitLabel === "Medium" ? "text-blue-600" : "text-red-600"}>{decision.jobFitLabel} ({matchScore}%)</strong></span>
+          {decision.resumeFitLabel !== "Missing" && (
+            <span>Resume fit: <strong>{decision.resumeFitLabel}{job.resumeCoverageScore != null ? ` (${job.resumeCoverageScore}%)` : ""}</strong></span>
+          )}
+        </div>
       </div>
 
       {job.missingKeywords.length > 0 && (
         <div className="mt-3">
           <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-2">
-            Missing from resume — need to add
+            Missing from resume — add these to improve fit
           </div>
           <div className="flex flex-wrap gap-1.5">
             {job.missingKeywords.map((kw) => (
@@ -558,6 +581,8 @@ function BestResumePanel({ job }: {
 }) {
   const recommendation = job.resumeRecommendation;
   const needsRewrite = recommendation === "FULL_REWRITE" || recommendation === "NEW_VERSION";
+  // Use raw resumeRecommendation here — BestResumePanel is about WHICH resume to use,
+  // not the combined decision. The combined decision is shown in ResumeRecommendationPanel.
   const hasResumes = job.client.resumes.length > 0;
   const hasCvText = !!job.client.cvText?.trim();
 
