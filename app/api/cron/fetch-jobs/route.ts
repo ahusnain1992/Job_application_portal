@@ -19,6 +19,7 @@ import { NormalizedJob } from "@/lib/job-providers/types";
 import { duplicateSignature } from "@/lib/services/duplicates";
 import { scoreJobForClient } from "@/lib/services/matching";
 import { analyzeResumeJobFit } from "@/lib/services/resume-match";
+import { isJobRelevant as sharedIsJobRelevant, ClientForFilter } from "@/lib/job-filter";
 
 // Protect cron endpoint: accept cron secret header OR admin session (UI button)
 async function authorized(req: NextRequest) {
@@ -308,75 +309,9 @@ function buildProviders() {
   return providers;
 }
 
-type ClientForFilter = {
-  targetJobTitles: string[];
-  alternativeJobTitles: string[];
-  preferredLocations: string[];
-  preferredCountries: string[];
-  preferredCities: string[];
-  workModePreference: WorkMode;
-};
-
+// Location + title filtering delegated to shared lib/job-filter.ts
 function isJobRelevant(job: NormalizedJob, client: ClientForFilter): boolean {
-  const allTitles = [...client.targetJobTitles, ...client.alternativeJobTitles];
-  const jobTitleLower = job.title.toLowerCase();
-
-  // Title must contain at least one significant word from the client's titles
-  const titleMatch = allTitles.some((t) => {
-    const words = t.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !["and", "the", "for", "with"].includes(w));
-    return words.some((w) => jobTitleLower.includes(w));
-  });
-  if (!titleMatch) return false;
-
-  // Remote-only clients: only accept remote/flexible/worldwide jobs
-  if (client.workModePreference === WorkMode.REMOTE) {
-    return job.workMode === WorkMode.REMOTE || job.workMode === WorkMode.FLEXIBLE ||
-      job.location.toLowerCase().includes("remote") || job.location.toLowerCase().includes("worldwide");
-  }
-
-  // Remote/hybrid jobs are always acceptable regardless of location
-  if (job.workMode === WorkMode.REMOTE || job.workMode === WorkMode.HYBRID) return true;
-  if (job.location.toLowerCase().includes("remote")) return true;
-
-  const jobLocationLower = job.location.toLowerCase();
-
-  // Check against structured cities first (most specific)
-  const cities = client.preferredCities.length ? client.preferredCities : [];
-  if (cities.length > 0) {
-    const cityMatch = cities.some((city) =>
-      city.toLowerCase().split(/[\s,]+/).filter((p) => p.length > 1).some((p) => jobLocationLower.includes(p))
-    );
-    if (cityMatch) return true;
-  }
-
-  // Check against structured countries (broad match — ensures UK client doesn't see German jobs)
-  const countries = client.preferredCountries.length ? client.preferredCountries : [];
-  if (countries.length > 0) {
-    const countryKeywords: Record<string, string[]> = {
-      "usa": ["united states", "usa", ", us", "u.s."],
-      "united states": ["united states", "usa", ", us"],
-      "uk": ["united kingdom", "england", ", uk", "britain", "gb"],
-      "united kingdom": ["united kingdom", "england", "britain", ", uk"],
-      "canada": ["canada", ", ca", "ontario", "toronto", "vancouver", "calgary"],
-      "australia": ["australia", "sydney", "melbourne", "brisbane"],
-      "germany": ["germany", "deutschland", "berlin", "munich", "frankfurt"],
-    };
-    const countryMatch = countries.some((c) => {
-      const keywords = countryKeywords[c.toLowerCase()] || [c.toLowerCase()];
-      return keywords.some((kw) => jobLocationLower.includes(kw));
-    });
-    if (countryMatch) return true;
-  }
-
-  // Fall back to legacy preferredLocations if no structured fields set
-  if (cities.length === 0 && countries.length === 0) {
-    return client.preferredLocations.some((loc) => {
-      const parts = loc.toLowerCase().split(/[\s,]+/).filter((p) => p.length > 1);
-      return parts.some((p) => jobLocationLower.includes(p));
-    });
-  }
-
-  return false;
+  return sharedIsJobRelevant(job, client);
 }
 
 async function ensureSources(names: string[]) {

@@ -13,6 +13,7 @@ import { Badge, PageHeader, Panel } from "@/components/ui";
 import { money, relativeDate, shortDate, statusLabel, workModeLabel } from "@/lib/format";
 import { requireUser, requireClientAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { htmlToText } from "@/lib/sanitize";
 
 export default async function JobDetailPage({
   params,
@@ -293,7 +294,7 @@ export default async function JobDetailPage({
             )}
             <div className="mt-5 border-t border-line pt-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">Full job description</div>
-              <p className="whitespace-pre-wrap text-sm leading-6 text-ink">{job.description}</p>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-ink break-words">{htmlToText(job.description)}</p>
             </div>
           </Panel>
         </div>
@@ -304,6 +305,39 @@ export default async function JobDetailPage({
           {/* Action form — employees see this unless someone else applied */}
           {!alreadyAppliedByOther ? (
             <>
+              <Panel title="How to apply">
+                <ol className="space-y-3 text-sm">
+                  <li className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white text-xs font-bold">1</span>
+                    <div>
+                      <div className="font-medium text-ink">Open the job posting</div>
+                      <div className="text-muted">Click &ldquo;Open Job&rdquo; below to go to the company&rsquo;s application page.</div>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white text-xs font-bold">2</span>
+                    <div>
+                      <div className="font-medium text-ink">Use the recommended resume</div>
+                      <div className="text-muted">Download the resume shown above and upload it to the application form.</div>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white text-xs font-bold">3</span>
+                    <div>
+                      <div className="font-medium text-ink">Submit the application manually</div>
+                      <div className="text-muted">Complete and submit the form on the employer&rsquo;s website. Do not use any auto-fill tools.</div>
+                    </div>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-white text-xs font-bold">4</span>
+                    <div>
+                      <div className="font-medium text-ink">Record your work below</div>
+                      <div className="text-muted">Fill in the confirmation number and upload a screenshot as proof.</div>
+                    </div>
+                  </li>
+                </ol>
+              </Panel>
+
               <Panel title="Cover letter support">
                 <div className="space-y-3 text-sm">
                   <p className="text-muted">

@@ -36,6 +36,8 @@ export function MobileNav({ links }: { links: NavItem[] }) {
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transition-transform duration-200 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
+        // @ts-expect-error inert is a valid HTML attribute not yet in React types
+        inert={!open ? "" : undefined}
       >
         <div className="flex items-center justify-between border-b border-line px-4 py-4">
           <div>
