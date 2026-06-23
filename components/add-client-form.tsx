@@ -394,6 +394,32 @@ export function AddClientForm({ teamMembers }: AddClientFormProps) {
         </div>
       </div>
 
+      {/* Industries */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium text-ink mb-1">
+            Industries preferred <span className="text-muted font-normal">(e.g. IT, FinTech, Healthcare)</span>
+          </label>
+          <input
+            name="industriesPreferred"
+            type="text"
+            placeholder="e.g. Information Technology, FinTech, SaaS"
+            className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-ink mb-1">
+            Industries to avoid
+          </label>
+          <input
+            name="industriesToAvoid"
+            type="text"
+            placeholder="e.g. Oil & Gas, Manufacturing, Automotive"
+            className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+        </div>
+      </div>
+
       {/* Exclude keywords */}
       <div>
         <label className="block text-sm font-medium text-ink mb-1">
