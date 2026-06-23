@@ -137,16 +137,33 @@ export function isJobRelevant(
   job: NormalizedJobForFilter,
   client: ClientForFilter
 ): boolean {
-  // Title must match at least one significant word from client's target titles
+  // Title must match a DOMAIN-SPECIFIC word from the client's target titles.
+  // Generic role words (engineer, analyst, manager, etc.) alone are not enough —
+  // they appear in unrelated titles like "Electrical Engineer" or "Manufacturing Analyst".
+  // We require at least one non-generic word to match (e.g. "data", "software", "backend").
+  const GENERIC_ROLE_WORDS = new Set([
+    "engineer", "analyst", "manager", "developer", "specialist", "coordinator",
+    "associate", "director", "lead", "senior", "junior", "principal", "staff",
+    "head", "officer", "executive", "consultant", "advisor", "architect",
+    "administrator", "technician", "supervisor", "representative", "intern",
+  ]);
+  const STOP_WORDS = new Set(["and", "the", "for", "with", "of", "in", "at", "to"]);
+
   const allTitles = [...client.targetJobTitles, ...client.alternativeJobTitles];
   const jobTitleLower = job.title.toLowerCase();
-  const STOP_WORDS = new Set(["and", "the", "for", "with", "of", "in", "at", "to"]);
 
   const titleMatch = allTitles.some((t) => {
     const words = t
       .toLowerCase()
       .split(/\s+/)
       .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+    // Domain words = words that are NOT generic role labels
+    const domainWords = words.filter((w) => !GENERIC_ROLE_WORDS.has(w));
+    // If the title has domain words, at least one must match
+    if (domainWords.length > 0) {
+      return domainWords.some((w) => jobTitleLower.includes(w));
+    }
+    // Fallback: title is all generic words (e.g. "Senior Manager") — match any word
     return words.some((w) => jobTitleLower.includes(w));
   });
   if (!titleMatch) return false;

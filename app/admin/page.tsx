@@ -76,9 +76,12 @@ export default async function AdminDashboard() {
     }),
 
     prisma.job.findMany({
-      take: 10,
+      take: 20,
       orderBy: [{ matchScore: "desc" }, { discoveredAt: "desc" }],
-      where: { status: { in: [JobStatus.SUGGESTED, JobStatus.APPROVED, JobStatus.ASSIGNED] } },
+      where: {
+        status: { in: [JobStatus.SUGGESTED, JobStatus.APPROVED, JobStatus.ASSIGNED] },
+        matchScore: { gte: 40 }, // exclude low-fit / wrong-title jobs
+      },
       select: {
         id: true, title: true, companyName: true, location: true, workMode: true,
         status: true, matchScore: true, sourceName: true, postedDate: true,
