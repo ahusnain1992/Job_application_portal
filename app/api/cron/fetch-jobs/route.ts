@@ -78,16 +78,25 @@ export async function GET(req: NextRequest) {
 
       const allJobs: NormalizedJob[] = [];
 
-      for (const provider of providers) {
-        try {
+      const providerResults = await Promise.allSettled(
+        providers.map(async (provider) => {
+          console.log(`[cron] Starting ${provider.name} for ${client.clientName}`);
           const jobs = await provider.fetchJobs(search);
-          allJobs.push(...jobs);
-          summary.jobsFetched += jobs.length;
-          const prev = summary.providerStats[provider.name];
-          summary.providerStats[provider.name] = { fetched: (prev?.fetched ?? 0) + jobs.length };
           console.log(`[cron] ${provider.name}: ${jobs.length} jobs for ${client.clientName}`);
-        } catch (err) {
-          const msg = String(err);
+          return { provider, jobs };
+        })
+      );
+
+      for (let i = 0; i < providerResults.length; i++) {
+        const result = providerResults[i];
+        const provider = providers[i];
+        if (result.status === "fulfilled") {
+          allJobs.push(...result.value.jobs);
+          summary.jobsFetched += result.value.jobs.length;
+          const prev = summary.providerStats[provider.name];
+          summary.providerStats[provider.name] = { fetched: (prev?.fetched ?? 0) + result.value.jobs.length };
+        } else {
+          const msg = String(result.reason);
           summary.errors.push(`${provider.name}(${client.clientName}): ${msg}`);
           summary.providerStats[provider.name] = { fetched: summary.providerStats[provider.name]?.fetched ?? 0, error: msg };
           console.error(`[cron] ${provider.name} error:`, msg);

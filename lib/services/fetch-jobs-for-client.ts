@@ -54,17 +54,26 @@ export async function fetchJobsForClient(
     excludeKeywords: client.keywordsExclude
   };
 
-  const allJobs: NormalizedJob[] = [];
-  for (const provider of providers) {
-    try {
-      console.log(`[fetch-jobs] Running provider: ${provider.name}`);
+  // Run all providers in parallel — Adzuna (~5s) and Apify (~2-5min) run concurrently
+  const providerResults = await Promise.allSettled(
+    providers.map(async (provider) => {
+      console.log(`[fetch-jobs] Starting provider: ${provider.name}`);
       const jobs = await provider.fetchJobs(search);
       console.log(`[fetch-jobs] ${provider.name} returned ${jobs.length} jobs`);
-      allJobs.push(...jobs);
-      summary.jobsFetched += jobs.length;
-      summary.providerStats[provider.name] = { fetched: jobs.length };
-    } catch (err) {
-      const msg = String(err);
+      return { provider, jobs };
+    })
+  );
+
+  const allJobs: NormalizedJob[] = [];
+  for (let i = 0; i < providerResults.length; i++) {
+    const result = providerResults[i];
+    const provider = providers[i];
+    if (result.status === "fulfilled") {
+      allJobs.push(...result.value.jobs);
+      summary.jobsFetched += result.value.jobs.length;
+      summary.providerStats[provider.name] = { fetched: result.value.jobs.length };
+    } else {
+      const msg = String(result.reason);
       console.error(`[fetch-jobs] Provider error — ${provider.name}: ${msg}`);
       summary.errors.push(`${provider.name}: ${msg}`);
       summary.providerStats[provider.name] = { fetched: 0, error: msg };
