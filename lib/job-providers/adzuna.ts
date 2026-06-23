@@ -41,6 +41,8 @@ export class AdzunaJobProvider implements JobProvider {
             sort_by: "date",
             "content-type": "application/json"
           });
+          // For remote-only clients, require "remote" to appear in the Adzuna listing
+          if (search.remoteOnly) params.set("what_and", "remote");
 
           if (search.postedWithinDays) {
             const maxDaysOld = search.postedWithinDays;

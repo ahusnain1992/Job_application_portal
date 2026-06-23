@@ -58,7 +58,7 @@ export class HimalayasJobProvider implements JobProvider {
             description: job.description || "",
             requiredSkills: job.categories || [],
             preferredSkills: [],
-            postedDate: job.pubDate ? new Date(job.pubDate) : undefined,
+            postedDate: job.pubDate ? new Date(Number(job.pubDate) * 1000) : undefined,
             applyUrl
           });
         }
