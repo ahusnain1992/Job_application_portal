@@ -184,8 +184,11 @@ export function isJobRelevant(
       locLower.includes("worldwide") ||
       locLower.includes("anywhere");
     if (!isRemote) return false;
-    // If client has country prefs, require the remote job to mention a matching country.
-    // Generic "Remote"/"Worldwide" is too broad for a USA-only or country-limited client.
+    // Jobs explicitly flagged REMOTE by their provider (Remotive, RemoteOK, etc.) are
+    // location-agnostic — the provider guarantees the role is remote.
+    // Only apply the country filter when workMode was inferred from the location string.
+    if (job.workMode === WorkMode.REMOTE) return true;
+    // Inferred-remote jobs: if client has country prefs, require a country signal.
     if (client.preferredCountries.length > 0) {
       return client.preferredCountries.some((c) => matchesCountry(locLower, c));
     }
