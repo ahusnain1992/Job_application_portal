@@ -1,5 +1,6 @@
 import { EmploymentType, WorkMode } from "@prisma/client";
 import { JobProvider, JobProviderSearch, NormalizedJob } from "@/lib/job-providers/types";
+import { buildJobSearchQueries } from "@/lib/job-providers/search-terms";
 
 export class JSearchJobProvider implements JobProvider {
   name = "JSearch";
@@ -11,11 +12,15 @@ export class JSearchJobProvider implements JobProvider {
 
   async fetchJobs(search: JobProviderSearch): Promise<NormalizedJob[]> {
     const results: NormalizedJob[] = [];
+    const searchLocations = search.locations.length ? search.locations : (search.countries.length ? search.countries : [""]);
+    const queries = buildJobSearchQueries({ titles: search.titles, includeKeywords: search.includeKeywords, max: 5 });
 
-    for (const title of search.titles.slice(0, 3)) {
-      for (const location of search.locations.slice(0, 2)) {
+    for (const title of queries) {
+      for (const location of searchLocations.slice(0, 2)) {
         try {
-          const query = `${title} in ${location}`;
+          const query = search.remoteOnly
+            ? `${title} remote ${location}`.trim()
+            : `${title} in ${location}`.trim();
           const datePosted = search.postedWithinDays
             ? search.postedWithinDays <= 1 ? "today"
             : search.postedWithinDays <= 3 ? "3days"

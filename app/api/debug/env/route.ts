@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getProviderManifest } from "@/lib/job-providers/registry";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export async function GET() {
     hasJSearchKey: !!process.env.JSEARCH_API_KEY,
     hasUsaJobsKey: !!process.env.USAJOBS_API_KEY,
     hasFindWorkKey: !!process.env.FINDWORK_API_KEY,
+    providers: getProviderManifest(),
     appUrl: process.env.APP_URL ?? null,
     db: { ok: dbOk, error: dbError },
     buildId: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 8) ?? "unknown",

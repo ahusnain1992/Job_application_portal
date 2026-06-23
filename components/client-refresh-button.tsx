@@ -28,12 +28,17 @@ export function ClientRefreshButton({ clientId, clientName }: { clientId: string
         return;
       }
       setState("success");
+      const errors = Array.isArray(data.errors) && data.errors.length
+        ? ` · ${data.errors.slice(0, 2).join(" ")}`
+        : "";
       const providerLines = data.providerStats
         ? Object.entries(data.providerStats as Record<string, { fetched: number; error?: string }>)
             .map(([n, s]) => s.error ? `${n}:❌` : `${n}:${s.fetched}`)
             .join(" | ")
         : "";
-      setMessage(`${data.jobsSaved ?? 0} saved · ${data.noApplyLink ?? 0} no-link skipped${providerLines ? " — " + providerLines : ""}`);
+      setMessage(
+        `${data.jobsSaved ?? 0} saved · ${data.filteredOut ?? 0} filtered · ${data.noApplyLink ?? 0} no-link · ${data.duplicatesSkipped ?? 0} duplicates${providerLines ? " — " + providerLines : ""}${errors}`
+      );
       setTimeout(() => window.location.reload(), 2500);
     } catch {
       setState("error");

@@ -34,6 +34,7 @@ export type FetchSummary = {
   duplicatesSkipped: number;
   noApplyLink: number;      // had no applyUrl — skipped
   filteredOut: number;      // failed isJobRelevant — wrong title/location
+  search: { titles: string[]; locations: string[]; countries: string[]; remoteOnly: boolean; postedWithinDays: number };
   errors: string[];
   providerStats: Record<string, { fetched: number; error?: string }>;
 };
@@ -42,7 +43,16 @@ export async function fetchJobsForClient(
   client: ClientWithResumes,
   options: { postedWithinDays?: number } = {}
 ): Promise<FetchSummary> {
-  const summary: FetchSummary = { jobsFetched: 0, jobsSaved: 0, duplicatesSkipped: 0, noApplyLink: 0, filteredOut: 0, errors: [], providerStats: {} };
+  const summary: FetchSummary = {
+    jobsFetched: 0,
+    jobsSaved: 0,
+    duplicatesSkipped: 0,
+    noApplyLink: 0,
+    filteredOut: 0,
+    search: { titles: [], locations: [], countries: [], remoteOnly: false, postedWithinDays: options.postedWithinDays ?? 7 },
+    errors: [],
+    providerStats: {}
+  };
 
   const providers = buildProviders();
 
@@ -52,13 +62,26 @@ export async function fetchJobsForClient(
   }
 
   const search = {
-    titles: [...client.targetJobTitles, ...client.alternativeJobTitles].slice(0, 4),
+    titles: buildSearchTitles(client),
     locations: (client.preferredCities.length ? client.preferredCities : client.preferredLocations).slice(0, 3),
     countries: client.preferredCountries,
     remoteOnly: client.workModePreference === WorkMode.REMOTE,
     postedWithinDays: options.postedWithinDays ?? 7,
+    includeKeywords: [...client.mainSkills, ...client.secondarySkills].slice(0, 12),
     excludeKeywords: client.keywordsExclude
   };
+  summary.search = {
+    titles: search.titles,
+    locations: search.locations,
+    countries: search.countries,
+    remoteOnly: search.remoteOnly,
+    postedWithinDays: search.postedWithinDays
+  };
+
+  if (search.titles.length === 0) {
+    summary.errors.push("Client needs at least one target title, alternative title, or skill before jobs can be fetched.");
+    return summary;
+  }
 
   // Run all providers in parallel — Adzuna (~5s) and Apify (~2-5min) run concurrently
   const providerResults = await Promise.allSettled(
@@ -92,6 +115,12 @@ export async function fetchJobsForClient(
     if (!isJobRelevant(job, client)) { summary.filteredOut++; return false; }
     return true;
   });
+
+  if (summary.jobsFetched === 0) {
+    summary.errors.push("Providers returned 0 jobs for this search. Check provider keys and broaden the client's target titles/skills.");
+  } else if (relevantJobs.length === 0) {
+    summary.errors.push("Providers returned jobs, but none passed the apply-link, title, and location filters.");
+  }
 
   await ensureSources(providers.map((p) => p.name));
   const sourceMap = Object.fromEntries(
@@ -223,6 +252,27 @@ export async function fetchJobsForClient(
   });
 
   return summary;
+}
+
+function buildSearchTitles(client: ClientWithResumes): string[] {
+  const seen = new Set<string>();
+  const values: string[] = [];
+  const add = (value: string) => {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    if (!normalized) return;
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    values.push(normalized);
+  };
+
+  [...client.targetJobTitles, ...client.alternativeJobTitles].forEach(add);
+  [...client.mainSkills, ...client.secondarySkills]
+    .filter((skill) => skill.trim().length >= 3)
+    .slice(0, 4)
+    .forEach(add);
+
+  return values.slice(0, 8);
 }
 
 // Location filtering is handled by the shared lib/job-filter.ts module.

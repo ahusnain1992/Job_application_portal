@@ -20,12 +20,14 @@ export class TheMuseJobProvider implements JobProvider {
 
   async fetchJobs(search: JobProviderSearch): Promise<NormalizedJob[]> {
     const results: NormalizedJob[] = [];
+    const queryParts = [...search.titles, ...(search.includeKeywords ?? [])]
+      .flatMap((value) => value.toLowerCase().split(/\s+/))
+      .filter((word) => word.length > 1);
 
-    for (const title of search.titles.slice(0, 2)) {
+    for (const page of [0, 1]) {
       try {
         const params = new URLSearchParams({
-          category: title,
-          page: "0",
+          page: String(page),
           descending: "true"
         });
         const res = await fetch(
@@ -39,6 +41,8 @@ export class TheMuseJobProvider implements JobProvider {
 
         for (const job of jobs.slice(0, 15)) {
           if (!job.name || !job.company?.name) continue;
+          const haystack = `${job.name} ${job.contents || ""} ${job.tags?.map((t) => t.name).join(" ") || ""}`.toLowerCase();
+          if (queryParts.length && !queryParts.some((word) => haystack.includes(word))) continue;
 
           const location = job.locations?.map((l) => l.name).join(", ") || "Unknown";
           const isRemote = location.toLowerCase().includes("remote") || location.toLowerCase().includes("flexible");

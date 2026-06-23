@@ -1,5 +1,6 @@
 import { EmploymentType, WorkMode } from "@prisma/client";
 import { JobProvider, JobProviderSearch, NormalizedJob } from "./types";
+import { buildProviderTags } from "@/lib/job-providers/search-terms";
 
 type JobicyJob = {
   id?: number;
@@ -22,7 +23,9 @@ export class JobicyJobProvider implements JobProvider {
   async fetchJobs(search: JobProviderSearch): Promise<NormalizedJob[]> {
     const results: NormalizedJob[] = [];
 
-    for (const title of search.titles.slice(0, 2)) {
+    const tags = buildProviderTags({ titles: search.titles, includeKeywords: search.includeKeywords, max: 4 });
+
+    for (const title of tags) {
       try {
         const params = new URLSearchParams({
           count: "20",

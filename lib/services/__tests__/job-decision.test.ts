@@ -19,16 +19,16 @@ function d(overrides: {
 
 describe("deriveJobDecision", () => {
   // ── Low match gate ────────────────────────────────────────────────────────
-  test("20% match + AS_IS + 100% coverage → do-not-apply, NOT tailor-resume", () => {
+  test("20% match + AS_IS + 100% coverage → do-not-apply, NOT apply-as-is", () => {
     const r = d({ matchScore: 20, resumeRecommendation: "AS_IS", resumeCoverageScore: 100 });
     expect(r.nextAction).toBe("do-not-apply");
     expect(r.shouldSkip).toBe(true);
   });
 
-  test("20% match never shows tailor-resume regardless of resume", () => {
+  test("20% match never shows apply-as-is regardless of resume", () => {
     for (const rec of ["AS_IS", "MINOR_TAILORING", "FULL_REWRITE", "NEW_VERSION", null]) {
       const r = d({ matchScore: 20, resumeRecommendation: rec });
-      expect(r.nextAction).not.toBe("tailor-resume");
+      expect(r.nextAction).not.toBe("apply-as-is");
     }
   });
 
@@ -51,7 +51,7 @@ describe("deriveJobDecision", () => {
     expect(r.nextAction).toBe("tailor-resume");
   });
 
-  test("60% match + MINOR_TAILORING (mapped to LEVERAGE) → tailor-resume", () => {
+  test("60% match + MINOR_TAILORING → tailor-resume", () => {
     expect(d({ matchScore: 60, resumeRecommendation: "MINOR_TAILORING" }).nextAction).toBe("tailor-resume");
   });
 
@@ -70,14 +70,14 @@ describe("deriveJobDecision", () => {
   });
 
   // ── High match gate (70%+) ────────────────────────────────────────────────
-  test("70% match + AS_IS (LEVERAGE) + applyUrl → tailor-resume", () => {
+  test("70% match + AS_IS (LEVERAGE) + applyUrl → apply-as-is", () => {
     const r = d({ matchScore: 70, resumeRecommendation: "AS_IS", applyUrl: "https://example.com" });
-    expect(r.nextAction).toBe("tailor-resume");
+    expect(r.nextAction).toBe("apply-as-is");
   });
 
-  test("75% match + AS_IS (LEVERAGE) + applyUrl → tailor-resume", () => {
+  test("75% match + AS_IS (LEVERAGE) + applyUrl → apply-as-is", () => {
     const r = d({ matchScore: 75, resumeRecommendation: "AS_IS", applyUrl: "https://example.com" });
-    expect(r.nextAction).toBe("tailor-resume");
+    expect(r.nextAction).toBe("apply-as-is");
   });
 
   test("75% match + MINOR_TAILORING → tailor-resume", () => {
@@ -128,12 +128,12 @@ describe("deriveJobDecision", () => {
   });
 
   // ── Queue priorities ──────────────────────────────────────────────────────
-  test("tailor-resume has highest queue priority (0)", () => {
+  test("apply-as-is has highest queue priority (0)", () => {
     const r = d({ matchScore: 80, resumeRecommendation: "AS_IS" });
     expect(r.queuePriority).toBe(0);
   });
 
-  test("do-not-apply has lowest queue priority (5)", () => {
-    expect(d({ matchScore: 20 }).queuePriority).toBe(5);
+  test("do-not-apply has lowest queue priority (6)", () => {
+    expect(d({ matchScore: 20 }).queuePriority).toBe(6);
   });
 });

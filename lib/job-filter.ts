@@ -19,7 +19,7 @@ export type NormalizedJobForFilter = {
 // Includes state abbreviations so "Chicago, IL" and "Dallas, TX" are recognized as USA
 const COUNTRY_KEYWORDS: Record<string, string[]> = {
   usa: [
-    "united states", "usa", ", us,", ", us ", " us ", "u.s.", "america",
+    "united states", "usa", "us", "u.s.", "america",
     // US state abbreviations (covers "Chicago, IL", "Dallas, TX", etc.)
     ", al", ", ak", ", az", ", ar", ", ca", ", co", ", ct", ", de", ", fl",
     ", ga", ", hi", ", id", ", il", ", in", ", ia", ", ks", ", ky", ", la",
@@ -81,7 +81,15 @@ const COUNTRY_KEYWORDS: Record<string, string[]> = {
 
 function matchesCountry(loc: string, country: string): boolean {
   const keywords = COUNTRY_KEYWORDS[country.toLowerCase()] ?? [country.toLowerCase()];
-  return keywords.some((kw) => loc.includes(kw));
+  return keywords.some((kw) => {
+    const normalized = kw.trim().replace(/^,\s*/, "");
+    // Two-letter state/country abbreviations need token boundaries.
+    // This prevents "Toronto, Canada" from matching "CA" while allowing "Remote / US".
+    if (/^[a-z]{2}$/.test(normalized)) {
+      return new RegExp(`(^|[^a-z])${normalized}([^a-z]|$)`).test(loc);
+    }
+    return loc.includes(kw);
+  });
 }
 
 export function locationMatchesClient(
@@ -115,10 +123,8 @@ export function locationMatchesClient(
   if (hasCountryPrefs) {
     const countryHit = client.preferredCountries.some((c) => matchesCountry(loc, c));
     if (countryHit) return true;
-    // Truly generic "Remote" / "Worldwide" / "Anywhere" with no specific country mentioned
-    // → accept for any client (they can work remotely from anywhere)
-    if (loc === "remote" || loc === "worldwide" || loc === "anywhere" || loc === "global") return true;
-    // Remote label with a specific country that didn't match → reject
+    // Country-restricted clients should not receive generic worldwide/anywhere jobs.
+    // "Remote" still needs an explicit country signal such as USA, United States, US, etc.
     return false;
   }
 
@@ -178,10 +184,9 @@ export function isJobRelevant(
       locLower.includes("worldwide") ||
       locLower.includes("anywhere");
     if (!isRemote) return false;
-    // If client has country prefs, accept generic "Remote"/"Worldwide" but reject
-    // location-specific remote jobs from non-matching countries (e.g. "Remote, Brazil")
+    // If client has country prefs, require the remote job to mention a matching country.
+    // Generic "Remote"/"Worldwide" is too broad for a USA-only or country-limited client.
     if (client.preferredCountries.length > 0) {
-      if (locLower === "remote" || locLower === "worldwide" || locLower === "anywhere" || locLower === "global") return true;
       return client.preferredCountries.some((c) => matchesCountry(locLower, c));
     }
     return true;

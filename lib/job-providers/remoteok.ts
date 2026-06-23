@@ -1,5 +1,6 @@
 import { EmploymentType, WorkMode } from "@prisma/client";
 import { JobProvider, JobProviderSearch, NormalizedJob } from "./types";
+import { buildProviderTags } from "@/lib/job-providers/search-terms";
 
 type RemoteOKJob = {
   id?: string;
@@ -20,12 +21,12 @@ export class RemoteOKJobProvider implements JobProvider {
   async fetchJobs(search: JobProviderSearch): Promise<NormalizedJob[]> {
     const results: NormalizedJob[] = [];
 
-    for (const title of search.titles.slice(0, 3)) {
+    const tags = buildProviderTags({ titles: search.titles, includeKeywords: search.includeKeywords, max: 5 });
+
+    for (const title of tags) {
       try {
-        // RemoteOK takes comma-separated tags
-        const tag = title.toLowerCase().replace(/\s+/g, "-");
         const res = await fetch(
-          `https://remoteok.com/api?tags=${encodeURIComponent(tag)}`,
+          `https://remoteok.com/api?tags=${encodeURIComponent(title)}`,
           {
             headers: { "User-Agent": "JobPortal/1.0 (job aggregator)" },
             signal: AbortSignal.timeout(12000)

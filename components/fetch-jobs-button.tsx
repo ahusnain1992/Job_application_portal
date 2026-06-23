@@ -61,7 +61,7 @@ export function FetchJobsButton({ lastRunAt }: { lastRunAt: string | null }) {
             .join(" | ")
         : "";
       setSummary(
-        `${data.jobsSaved ?? 0} saved · ${data.jobsFetched ?? 0} fetched · ${data.duplicatesSkipped ?? 0} dupes skipped${providerLines ? " — " + providerLines : ""}${data.errors?.length ? " ⚠ " + data.errors.slice(0, 3).join("; ") : ""}`
+        `${data.jobsSaved ?? 0} saved · ${data.jobsFetched ?? 0} fetched · ${data.filteredOut ?? 0} filtered · ${data.noApplyLink ?? 0} no-link · ${data.duplicatesSkipped ?? 0} dupes${providerLines ? " — " + providerLines : ""}${data.errors?.length ? " ⚠ " + data.errors.slice(0, 3).join("; ") : ""}`
       );
       setTimeout(() => window.location.reload(), 2000);
     } catch {

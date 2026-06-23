@@ -1,5 +1,6 @@
 import { EmploymentType, WorkMode } from "@prisma/client";
 import { JobProvider, JobProviderSearch, NormalizedJob } from "@/lib/job-providers/types";
+import { buildJobSearchQueries } from "@/lib/job-providers/search-terms";
 
 export class AdzunaJobProvider implements JobProvider {
   name = "Adzuna";
@@ -26,7 +27,9 @@ export class AdzunaJobProvider implements JobProvider {
       ? [""]
       : (search.locations.length ? search.locations : [""]).slice(0, 2);
 
-    for (const title of search.titles.slice(0, 3)) {
+    const queries = buildJobSearchQueries({ titles: search.titles, includeKeywords: search.includeKeywords, max: 5 });
+
+    for (const title of queries) {
       for (const location of searchLocations) {
         try {
           const params = new URLSearchParams({

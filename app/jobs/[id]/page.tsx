@@ -510,6 +510,7 @@ function ResumeRecommendationPanel({
   });
 
   const bannerStyle = {
+    "apply-as-is":         { bg: "bg-[#ECF7F4]", border: "border-brand/30",    text: "text-[#186A5E]",  emoji: "✅", headline: "Apply as-is — strong job fit and resume is ready" },
     "tailor-resume":       { bg: "bg-[#ECF7F4]", border: "border-brand/30",    text: "text-[#186A5E]",  emoji: "✏️", headline: "Tailor existing resume — ATS keyword match is strong" },
     "rewrite-resume":      { bg: "bg-[#EEF5FF]", border: "border-signal/30",   text: "text-[#1D4ED8]",  emoji: "🔄", headline: "Rewrite resume for ATS — too many keyword gaps to pass as-is" },
     "new-resume-version":  { bg: "bg-[#FFF6EB]", border: "border-warn/30",     text: "text-[#8A4604]",  emoji: "🆕", headline: "New resume version needed — domain or keyword mismatch" },

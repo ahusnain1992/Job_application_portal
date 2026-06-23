@@ -1,14 +1,14 @@
 /**
  * Single source of truth for the combined job + resume decision.
  *
- * We ALWAYS rewrite the resume before applying. The decision is:
- *   - Can we tailor the existing resume to pass ATS? (LEVERAGE)
- *   - Does the resume need a full rewrite to pass ATS? (REWRITE / NEW_VERSION)
+ * The decision combines job fit, apply-link readiness, and resume/ATS fit.
+ * Resume coverage can never override poor job fit.
  *
  * Rule summary:
- *   matchScore < 45  → skip (poor job fit)
- *   matchScore ≥ 45  → resume ATS check determines how much rewriting is needed:
- *     LEVERAGE     → tailor existing resume (≥70% keyword coverage)
+ *   matchScore < 45   → skip (poor job fit)
+ *   matchScore 45–69  → tailor/rewrite first, never apply as-is
+ *   matchScore ≥ 70   → resume ATS check determines action:
+ *     LEVERAGE     → apply as-is
  *     REWRITE      → rewrite resume (40–69% keyword coverage)
  *     NEW_VERSION  → new version from scratch (<40% or domain shift)
  *   No resume text  → "missing-resume-text"
@@ -16,6 +16,7 @@
  */
 
 export type NextAction =
+  | "apply-as-is"         // High job fit + strong resume + apply link exists
   | "tailor-resume"       // ATS: ≥70% match — tailor existing resume, add missing keywords
   | "rewrite-resume"      // ATS: 40–69% match — rewrite around the JD to pass ATS
   | "new-resume-version"  // ATS: <40% or domain shift — new targeted version from scratch
@@ -57,7 +58,6 @@ export function deriveJobDecision(params: {
   // Normalize old DB values to new ATS-framed values
   const legacyMap: Record<string, string> = {
     "AS_IS": "LEVERAGE",
-    "MINOR_TAILORING": "LEVERAGE",
     "FULL_REWRITE": "REWRITE",
   };
   const rawRec = params.resumeRecommendation;
@@ -89,8 +89,11 @@ export function deriveJobDecision(params: {
   } else if (!applyUrl) {
     nextAction = "find-apply-link";
   } else {
-    // Job fit is acceptable — determine how much resume work is needed to pass ATS
+    // Medium job fit should never be presented as apply-ready.
+    // Even with strong resume coverage, the business action is to tailor first.
     if (resumeRecommendation === "LEVERAGE") {
+      nextAction = matchScore >= HIGH_MATCH ? "apply-as-is" : "tailor-resume";
+    } else if (resumeRecommendation === "MINOR_TAILORING") {
       nextAction = "tailor-resume";
     } else if (resumeRecommendation === "REWRITE") {
       nextAction = "rewrite-resume";
@@ -101,13 +104,14 @@ export function deriveJobDecision(params: {
   }
 
   const ACTION_META: Record<NextAction, { label: string; tone: JobDecision["actionTone"]; priority: number }> = {
-    "tailor-resume":       { label: "Tailor existing resume",    tone: "brand",   priority: 0 },
-    "rewrite-resume":      { label: "Rewrite resume for ATS",    tone: "signal",  priority: 1 },
-    "new-resume-version":  { label: "New resume version needed", tone: "warn",    priority: 2 },
-    "find-apply-link":     { label: "Find apply link",           tone: "neutral", priority: 3 },
-    "missing-resume-text": { label: "Add resume text",           tone: "neutral", priority: 4 },
-    "do-not-apply":        { label: "Poor match — skip",         tone: "danger",  priority: 5 },
-    "wrong-location":      { label: "Wrong location",            tone: "danger",  priority: 5 },
+    "apply-as-is":         { label: "Apply as-is",               tone: "brand",   priority: 0 },
+    "tailor-resume":       { label: "Tailor resume first",       tone: "signal",  priority: 1 },
+    "rewrite-resume":      { label: "Rewrite resume",           tone: "warn",    priority: 2 },
+    "new-resume-version":  { label: "New resume version needed", tone: "warn",    priority: 3 },
+    "find-apply-link":     { label: "Find apply link",           tone: "neutral", priority: 4 },
+    "missing-resume-text": { label: "Add resume text",           tone: "neutral", priority: 5 },
+    "do-not-apply":        { label: "Poor match — skip",         tone: "danger",  priority: 6 },
+    "wrong-location":      { label: "Wrong location",            tone: "danger",  priority: 6 },
   };
 
   const meta = ACTION_META[nextAction];
