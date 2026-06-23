@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!parsed.success) {
+    console.error("[/api/clients] Zod validation failed:", JSON.stringify(parsed.error.flatten()));
     return redirectTo("/clients?error=invalid-client");
   }
 
@@ -183,55 +184,78 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const client = await prisma.clientProfile.create({
-    data: {
-      clientName: data.clientName,
-      currentJobTitle: data.currentJobTitle,
-      targetJobTitles: list(data.targetJobTitles),
-      alternativeJobTitles: list(data.alternativeJobTitles),
-      mainSkills: list(data.mainSkills),
-      secondarySkills: list(data.secondarySkills),
-      preferredLocations: list(data.preferredLocations),
-      preferredCountries: list(data.preferredCountries),
-      preferredCities: list(data.preferredCities),
-      workModePreference: data.workModePreference,
-      employmentTypePreference: data.employmentTypePreference,
-      minimumSalary: data.minimumSalary || null,
-      maximumSalary: data.maximumSalary || null,
-      cvText: data.cvText || null,
-      resumeUrl: data.resumeUrl || null,
-      linkedinUrl: data.linkedinUrl || null,
-      applicationNotes: data.applicationNotes || null,
-      keywordsInclude: list(data.keywordsInclude),
-      keywordsExclude: list(data.keywordsExclude),
-      industriesPreferred: list(data.industriesPreferred),
-      industriesToAvoid: list(data.industriesToAvoid),
-      dateOfBirth: parseDate(data.dateOfBirth),
-      phone: data.phone || null,
-      personalEmail: data.personalEmail || null,
-      streetAddress: data.streetAddress || null,
-      addressCity: data.addressCity || null,
-      addressState: data.addressState || null,
-      addressZip: data.addressZip || null,
-      addressCountry: data.addressCountry || null,
-      githubUrl: data.githubUrl || null,
-      highestDegree: data.highestDegree || null,
-      fieldOfStudy: data.fieldOfStudy || null,
-      university: data.university || null,
-      graduationYear: data.graduationYear || null,
-      gpa: data.gpa || null,
-      noticePeriod: data.noticePeriod || null,
-      availableFrom: parseDate(data.availableFrom),
-      languages: list(data.languages),
-      genderEeo: data.genderEeo || null,
-      ethnicityEeo: data.ethnicityEeo || null,
-      veteranStatus: data.veteranStatus || null,
-      disabilityStatus: data.disabilityStatus || null,
-    }
-  });
+  let client: { id: string };
+  try {
+    client = await prisma.clientProfile.create({
+      data: {
+          clientName: data.clientName,
+        currentJobTitle: data.currentJobTitle,
+        targetJobTitles: list(data.targetJobTitles),
+        alternativeJobTitles: list(data.alternativeJobTitles),
+        mainSkills: list(data.mainSkills),
+        secondarySkills: list(data.secondarySkills),
+        preferredLocations: list(data.preferredLocations),
+        preferredCountries: list(data.preferredCountries),
+        preferredCities: list(data.preferredCities),
+        workModePreference: data.workModePreference,
+        employmentTypePreference: data.employmentTypePreference,
+        minimumSalary: data.minimumSalary || null,
+        maximumSalary: data.maximumSalary || null,
+        cvText: data.cvText || null,
+        resumeUrl: data.resumeUrl || null,
+        linkedinUrl: data.linkedinUrl || null,
+        applicationNotes: data.applicationNotes || null,
+        keywordsInclude: list(data.keywordsInclude),
+        keywordsExclude: list(data.keywordsExclude),
+        industriesPreferred: list(data.industriesPreferred),
+        industriesToAvoid: list(data.industriesToAvoid),
+        dateOfBirth: parseDate(data.dateOfBirth),
+        phone: data.phone || null,
+        personalEmail: data.personalEmail || null,
+        streetAddress: data.streetAddress || null,
+        addressCity: data.addressCity || null,
+        addressState: data.addressState || null,
+        addressZip: data.addressZip || null,
+        addressCountry: data.addressCountry || null,
+        githubUrl: data.githubUrl || null,
+        highestDegree: data.highestDegree || null,
+        fieldOfStudy: data.fieldOfStudy || null,
+        university: data.university || null,
+        graduationYear: data.graduationYear || null,
+        gpa: data.gpa || null,
+        noticePeriod: data.noticePeriod || null,
+        availableFrom: parseDate(data.availableFrom),
+        languages: list(data.languages),
+        genderEeo: data.genderEeo || null,
+        ethnicityEeo: data.ethnicityEeo || null,
+        veteranStatus: data.veteranStatus || null,
+        disabilityStatus: data.disabilityStatus || null,
+      }
+    });
+  } catch (err) {
+    console.error("[/api/clients] Prisma create failed:", err);
+    return redirectTo("/clients?error=db-error");
+  }
 
   if (data.teamMemberId) {
     await prisma.clientAssignment.create({ data: { clientId: client.id, userId: data.teamMemberId } });
+  }
+
+  // Create up to 3 resumes from the per-title resume sections
+  for (let i = 0; i < 3; i++) {
+    const title = (form.get(`resumeTitle_${i}`) as string | null)?.trim();
+    const fileValue = (form.get(`resumeFile_${i}`) as string | null)?.trim();
+    const resumeText = (form.get(`resumeText_${i}`) as string | null)?.trim();
+    if (!title && !fileValue && !resumeText) continue;
+    const labelledTitle = title || `Resume ${i + 1}`;
+    await prisma.resume.create({
+      data: {
+        clientId: client.id,
+        name: labelledTitle,
+        fileUrl: fileValue && (fileValue.startsWith("data:") || fileValue.startsWith("http")) ? fileValue : null,
+        resumeText: resumeText || null,
+      }
+    });
   }
 
   await prisma.auditLog.create({

@@ -9,9 +9,10 @@ interface TagInputProps {
   placeholder?: string;
   required?: boolean;
   className?: string;
+  onTagsChange?: (tags: string[]) => void;
 }
 
-export function TagInput({ name, defaultValue = "", placeholder = "Type and press Enter or comma", required, className = "" }: TagInputProps) {
+export function TagInput({ name, defaultValue = "", placeholder = "Type and press Enter or comma", required, className = "", onTagsChange }: TagInputProps) {
   const initial = defaultValue
     ? defaultValue.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
@@ -22,13 +23,17 @@ export function TagInput({ name, defaultValue = "", placeholder = "Type and pres
   function addTag(raw: string) {
     const val = raw.trim();
     if (val && !tags.includes(val)) {
-      setTags((prev) => [...prev, val]);
+      const next = [...tags, val];
+      setTags(next);
+      onTagsChange?.(next);
     }
     setInput("");
   }
 
   function removeTag(tag: string) {
-    setTags((prev) => prev.filter((t) => t !== tag));
+    const next = tags.filter((t) => t !== tag);
+    setTags(next);
+    onTagsChange?.(next);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {

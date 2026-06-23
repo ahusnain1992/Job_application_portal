@@ -9,6 +9,7 @@ interface FileUploadOrUrlProps {
   accept?: string;
   placeholder?: string;
   className?: string;
+  onValueChange?: (value: string) => void;
 }
 
 export function FileUploadOrUrl({
@@ -16,7 +17,8 @@ export function FileUploadOrUrl({
   defaultValue = "",
   accept = ".pdf,.doc,.docx",
   placeholder = "https://drive.google.com/...",
-  className = ""
+  className = "",
+  onValueChange
 }: FileUploadOrUrlProps) {
   const isDataUrl = defaultValue?.startsWith("data:");
   const [mode, setMode] = useState<"url" | "file">(isDataUrl ? "file" : "url");
@@ -39,7 +41,9 @@ export function FileUploadOrUrl({
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = () => {
-      setFileValue(reader.result as string);
+      const val = reader.result as string;
+      setFileValue(val);
+      onValueChange?.(val);
     };
     reader.readAsDataURL(file);
   }
@@ -67,7 +71,7 @@ export function FileUploadOrUrl({
           type="url"
           name={name}
           value={urlValue}
-          onChange={(e) => setUrlValue(e.target.value)}
+          onChange={(e) => { setUrlValue(e.target.value); onValueChange?.(e.target.value); }}
           placeholder={placeholder}
           className="focus-ring block w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink placeholder:text-muted"
         />
