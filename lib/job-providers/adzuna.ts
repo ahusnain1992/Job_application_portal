@@ -64,7 +64,9 @@ export class AdzunaJobProvider implements JobProvider {
           console.log(`[adzuna] "${title}" in "${location || "any"}" → ${jobs.length} results`);
 
           for (const job of jobs) {
-            results.push(normalizeAdzuna(job, this.name));
+            // When remoteOnly search used what_and=remote, jobs ARE remote even if
+            // the location field shows a city — override workMode accordingly
+            results.push(normalizeAdzuna(job, this.name, search.remoteOnly));
           }
         } catch (err) {
           console.error(`[adzuna] Error fetching "${title}" in "${location}":`, err);
@@ -90,9 +92,9 @@ type AdzunaJob = {
   category?: { label: string };
 };
 
-function normalizeAdzuna(job: AdzunaJob, sourceName: string): NormalizedJob {
+function normalizeAdzuna(job: AdzunaJob, sourceName: string, remoteOnly = false): NormalizedJob {
   const location = job.location?.display_name || "Unknown";
-  const workMode = inferWorkMode(location);
+  const workMode = remoteOnly ? WorkMode.REMOTE : inferWorkMode(location);
 
   return {
     externalId: `adzuna-${job.id}`,

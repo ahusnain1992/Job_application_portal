@@ -1,15 +1,12 @@
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 min — Apify actors need up to 2 min each
+export const maxDuration = 300;
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
-import { Role } from "@prisma/client";
 import { buildProviders } from "@/lib/job-providers/registry";
 import { isJobRelevant } from "@/lib/job-filter";
-import { WorkMode, EmploymentType } from "@prisma/client";
+import { WorkMode } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
-  // Auth check skipped temporarily for diagnostics — remove this route after debugging
   const body = await req.json().catch(() => ({}));
   const titles: string[] = body.titles ?? ["Data Engineer", "Senior Data Engineer"];
   const countries: string[] = body.countries ?? ["United States"];
@@ -33,6 +30,19 @@ export async function POST(req: NextRequest) {
     workModePreference: remoteOnly ? WorkMode.REMOTE : WorkMode.FLEXIBLE,
   };
 
+  // Also test Apify token directly
+  const apifyToken = process.env.APIFY_API_TOKEN;
+  let apifyTokenStatus = "not set";
+  if (apifyToken) {
+    try {
+      const r = await fetch(`https://api.apify.com/v2/users/me?token=${apifyToken}`, { signal: AbortSignal.timeout(10000) });
+      const d = await r.json() as { username?: string; plan?: { id?: string } };
+      apifyTokenStatus = r.ok ? `valid (user: ${d.username}, plan: ${d.plan?.id})` : `error ${r.status}`;
+    } catch (e) {
+      apifyTokenStatus = `fetch failed: ${String(e)}`;
+    }
+  }
+
   const providers = buildProviders();
   const startTime = Date.now();
 
@@ -41,19 +51,22 @@ export async function POST(req: NextRequest) {
       const t0 = Date.now();
       const jobs = await provider.fetchJobs(search);
       const elapsed = Date.now() - t0;
-      const relevant = jobs.filter((j) => j.applyUrl?.trim() && isJobRelevant(j, mockClient));
+      const withLink = jobs.filter((j) => j.applyUrl?.trim());
+      const relevant = withLink.filter((j) => isJobRelevant(j, mockClient));
+      const allSamples = jobs.slice(0, 2).map((j) => ({
+        title: j.title, company: j.companyName, location: j.location,
+        workMode: j.workMode, hasApplyUrl: !!j.applyUrl
+      }));
       return {
         provider: provider.name,
         fetched: jobs.length,
-        withApplyUrl: jobs.filter((j) => j.applyUrl?.trim()).length,
+        withApplyUrl: withLink.length,
         relevant: relevant.length,
         elapsedMs: elapsed,
-        samples: relevant.slice(0, 3).map((j) => ({
-          title: j.title,
-          company: j.companyName,
-          location: j.location,
-          workMode: j.workMode,
-          applyUrl: j.applyUrl
+        rawSamples: allSamples,
+        relevantSamples: relevant.slice(0, 3).map((j) => ({
+          title: j.title, company: j.companyName, location: j.location,
+          workMode: j.workMode, applyUrl: j.applyUrl
         }))
       };
     })
@@ -65,6 +78,8 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({
+    apifyTokenStatus,
+    adzunaConfigured: !!(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY),
     searchParams: search,
     totalElapsedMs: Date.now() - startTime,
     results
