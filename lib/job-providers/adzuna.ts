@@ -43,16 +43,20 @@ export class AdzunaJobProvider implements JobProvider {
             { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15000) }
           );
 
-          if (!res.ok) continue;
+          if (!res.ok) {
+            console.error(`[adzuna] API error ${res.status} for "${title}" in "${location}": ${await res.text()}`);
+            continue;
+          }
 
           const data = (await res.json()) as { results?: AdzunaJob[] };
           const jobs = data.results || [];
+          console.log(`[adzuna] "${title}" in "${location || "any"}" → ${jobs.length} results`);
 
           for (const job of jobs) {
             results.push(normalizeAdzuna(job, this.name));
           }
-        } catch {
-          // Skip failed individual queries, continue with others
+        } catch (err) {
+          console.error(`[adzuna] Error fetching "${title}" in "${location}":`, err);
         }
       }
     }
@@ -103,7 +107,7 @@ function inferWorkMode(location: string): WorkMode {
   const l = location.toLowerCase();
   if (l.includes("remote")) return WorkMode.REMOTE;
   if (l.includes("hybrid")) return WorkMode.HYBRID;
-  return WorkMode.ONSITE;
+  return WorkMode.FLEXIBLE;
 }
 
 function inferEmployment(value?: string): EmploymentType {

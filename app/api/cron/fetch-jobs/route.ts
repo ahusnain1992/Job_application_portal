@@ -3,19 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { EmploymentType, JobStatus, SourceType, WorkMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { AdzunaJobProvider } from "@/lib/job-providers/adzuna";
-import { JSearchJobProvider } from "@/lib/job-providers/jsearch";
-import { RemotiveJobProvider } from "@/lib/job-providers/remotive";
-import { RemoteOKJobProvider } from "@/lib/job-providers/remoteok";
-import { ArbeitnowJobProvider } from "@/lib/job-providers/arbeitnow";
-import { JobicyJobProvider } from "@/lib/job-providers/jobicy";
-import { TheMuseJobProvider } from "@/lib/job-providers/themuse";
-import { HimalayasJobProvider } from "@/lib/job-providers/himalayas";
-import { USAJobsProvider } from "@/lib/job-providers/usajobs";
-import { FindWorkJobProvider } from "@/lib/job-providers/findwork";
-import { IndeedJobProvider } from "@/lib/job-providers/indeed";
-import { GlassdoorJobProvider } from "@/lib/job-providers/glassdoor";
-import { LinkedInJobProvider } from "@/lib/job-providers/linkedin";
+import { buildProviders } from "@/lib/job-providers/registry";
 import { NormalizedJob } from "@/lib/job-providers/types";
 import { duplicateSignature } from "@/lib/services/duplicates";
 import { scoreJobForClient } from "@/lib/services/matching";
@@ -266,52 +254,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: true, ...summary });
 }
 
-function buildProviders() {
-  const providers = [];
-
-  if (process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY) {
-    providers.push(
-      new AdzunaJobProvider({
-        appId: process.env.ADZUNA_APP_ID,
-        appKey: process.env.ADZUNA_APP_KEY
-      })
-    );
-  }
-
-  if (process.env.JSEARCH_API_KEY) {
-    providers.push(new JSearchJobProvider({ apiKey: process.env.JSEARCH_API_KEY }));
-  }
-
-  // Free providers — no API key required, always included
-  providers.push(new RemotiveJobProvider());   // remote-only, unlimited
-  providers.push(new RemoteOKJobProvider());   // remote tech jobs, unlimited
-  providers.push(new ArbeitnowJobProvider());  // EU + remote, unlimited
-  providers.push(new JobicyJobProvider());     // remote jobs, unlimited
-  providers.push(new TheMuseJobProvider());    // tech companies, unlimited
-  providers.push(new HimalayasJobProvider());  // remote tech, unlimited
-
-  // Key-gated free providers
-  if (process.env.USAJOBS_API_KEY) {
-    providers.push(new USAJobsProvider());    // US government & federal jobs
-  }
-  if (process.env.FINDWORK_API_KEY) {
-    providers.push(new FindWorkJobProvider()); // tech job board, free tier
-  }
-
-  // Apify-backed providers (requires APIFY_API_TOKEN)
-  const apifyToken = process.env.APIFY_API_TOKEN;
-  if (apifyToken) {
-    // LinkedIn: dedicated provider that filters out Easy Apply jobs
-    // Employees will always land on the company's own career portal
-    providers.push(new LinkedInJobProvider(apifyToken));
-
-    // Indeed and Glassdoor via dedicated providers (correct input format for each actor)
-    providers.push(new IndeedJobProvider(apifyToken));
-    providers.push(new GlassdoorJobProvider(apifyToken));
-  }
-
-  return providers;
-}
 
 // Location + title filtering delegated to shared lib/job-filter.ts
 function isJobRelevant(job: NormalizedJob, client: ClientForFilter): boolean {

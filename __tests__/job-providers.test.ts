@@ -13,7 +13,7 @@ describe("RemoteOKJobProvider", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockData }));
     const { RemoteOKJobProvider } = await import("../lib/job-providers/remoteok");
     const provider = new RemoteOKJobProvider();
-    const jobs = await provider.fetchJobs({ titles: ["python"], locations: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await provider.fetchJobs({ titles: ["python"], locations: [], countries: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs).toHaveLength(1);
     expect(jobs[0].title).toBe("Senior Python Developer");
     expect(jobs[0].workMode).toBe(WorkMode.REMOTE);
@@ -24,7 +24,7 @@ describe("RemoteOKJobProvider", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 429 }));
     const { RemoteOKJobProvider } = await import("../lib/job-providers/remoteok");
     const provider = new RemoteOKJobProvider();
-    const jobs = await provider.fetchJobs({ titles: ["python"], locations: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await provider.fetchJobs({ titles: ["python"], locations: [], countries: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs).toHaveLength(0);
   });
 
@@ -36,7 +36,7 @@ describe("RemoteOKJobProvider", () => {
     ];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockData }));
     const { RemoteOKJobProvider } = await import("../lib/job-providers/remoteok");
-    const jobs = await (new RemoteOKJobProvider()).fetchJobs({ titles: ["engineer"], locations: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new RemoteOKJobProvider()).fetchJobs({ titles: ["engineer"], locations: [], countries: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs).toHaveLength(1);
   });
 });
@@ -53,7 +53,7 @@ describe("ArbeitnowJobProvider", () => {
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockData }));
     const { ArbeitnowJobProvider } = await import("../lib/job-providers/arbeitnow");
-    const jobs = await (new ArbeitnowJobProvider()).fetchJobs({ titles: ["data engineer"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new ArbeitnowJobProvider()).fetchJobs({ titles: ["data engineer"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs[0].workMode).toBe(WorkMode.REMOTE);
     expect(jobs[0].employmentType).toBe(EmploymentType.FULL_TIME);
     expect(jobs[0].externalId).toBe("arbeitnow-abc");
@@ -65,7 +65,7 @@ describe("ArbeitnowJobProvider", () => {
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockData }));
     const { ArbeitnowJobProvider } = await import("../lib/job-providers/arbeitnow");
-    const jobs = await (new ArbeitnowJobProvider()).fetchJobs({ titles: ["dev"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new ArbeitnowJobProvider()).fetchJobs({ titles: ["dev"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs[0].description).not.toContain("<p>");
     expect(jobs[0].description).toContain("Hello");
   });
@@ -81,7 +81,7 @@ describe("JobicyJobProvider", () => {
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockData }));
     const { JobicyJobProvider } = await import("../lib/job-providers/jobicy");
-    const jobs = await (new JobicyJobProvider()).fetchJobs({ titles: ["backend"], locations: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new JobicyJobProvider()).fetchJobs({ titles: ["backend"], locations: [], countries: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs[0].requiredSkills).toContain("node.js");
     expect(jobs[0].requiredSkills).toContain("postgres");
     expect(jobs[0].workMode).toBe(WorkMode.REMOTE);
@@ -106,7 +106,7 @@ describe("TheMuseJobProvider", () => {
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockData }));
     const { TheMuseJobProvider } = await import("../lib/job-providers/themuse");
-    const jobs = await (new TheMuseJobProvider()).fetchJobs({ titles: ["software engineer"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new TheMuseJobProvider()).fetchJobs({ titles: ["software engineer"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs[0].workMode).toBe(WorkMode.REMOTE);
     expect(jobs[0].externalId).toBe("themuse-1");
   });
@@ -117,7 +117,7 @@ describe("TheMuseJobProvider", () => {
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockData }));
     const { TheMuseJobProvider } = await import("../lib/job-providers/themuse");
-    const jobs = await (new TheMuseJobProvider()).fetchJobs({ titles: ["pm"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new TheMuseJobProvider()).fetchJobs({ titles: ["pm"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs[0].workMode).toBe(WorkMode.ONSITE);
   });
 });
@@ -132,7 +132,7 @@ describe("HimalayasJobProvider", () => {
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockData }));
     const { HimalayasJobProvider } = await import("../lib/job-providers/himalayas");
-    const jobs = await (new HimalayasJobProvider()).fetchJobs({ titles: ["data engineer"], locations: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new HimalayasJobProvider()).fetchJobs({ titles: ["data engineer"], locations: [], countries: [], remoteOnly: true, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs[0].location).toBe("USA, Canada");
     expect(jobs[0].workMode).toBe(WorkMode.REMOTE);
     expect(jobs[0].requiredSkills).toContain("python");
@@ -151,7 +151,7 @@ describe("LinkedInJobProvider Easy Apply filter", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockItems }));
     const { LinkedInJobProvider } = await import("../lib/job-providers/linkedin");
     const provider = new LinkedInJobProvider("fake-token");
-    const jobs = await provider.fetchJobs({ titles: ["engineer"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await provider.fetchJobs({ titles: ["engineer"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs).toHaveLength(1);
     expect(jobs[0].companyName).toBe("Co A");
   });
@@ -162,7 +162,7 @@ describe("LinkedInJobProvider Easy Apply filter", () => {
     ];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockItems }));
     const { LinkedInJobProvider } = await import("../lib/job-providers/linkedin");
-    const jobs = await (new LinkedInJobProvider("fake-token")).fetchJobs({ titles: ["analyst"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new LinkedInJobProvider("fake-token")).fetchJobs({ titles: ["analyst"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs).toHaveLength(0);
   });
 
@@ -172,7 +172,7 @@ describe("LinkedInJobProvider Easy Apply filter", () => {
     ];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => mockItems }));
     const { LinkedInJobProvider } = await import("../lib/job-providers/linkedin");
-    const jobs = await (new LinkedInJobProvider("fake-token")).fetchJobs({ titles: ["staff eng"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new LinkedInJobProvider("fake-token")).fetchJobs({ titles: ["staff eng"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs).toHaveLength(1);
     expect(jobs[0].applyUrl).toBe("https://stripe.com/jobs/apply/4");
   });
@@ -180,14 +180,14 @@ describe("LinkedInJobProvider Easy Apply filter", () => {
   it("returns empty array when fetch fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network timeout")));
     const { LinkedInJobProvider } = await import("../lib/job-providers/linkedin");
-    const jobs = await (new LinkedInJobProvider("fake-token")).fetchJobs({ titles: ["engineer"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new LinkedInJobProvider("fake-token")).fetchJobs({ titles: ["engineer"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs).toHaveLength(0);
   });
 
   it("returns empty array when APIFY token is missing", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const { LinkedInJobProvider } = await import("../lib/job-providers/linkedin");
-    const jobs = await (new LinkedInJobProvider("")).fetchJobs({ titles: ["engineer"], locations: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
+    const jobs = await (new LinkedInJobProvider("")).fetchJobs({ titles: ["engineer"], locations: [], countries: [], remoteOnly: false, postedWithinDays: 7, excludeKeywords: [] });
     expect(jobs).toHaveLength(0);
     expect(fetch).not.toHaveBeenCalled();
   });
