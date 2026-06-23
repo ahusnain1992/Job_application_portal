@@ -174,21 +174,22 @@ export function isJobRelevant(
   });
   if (!titleMatch) return false;
 
-  // Remote-only clients: job must be remote/flexible, then apply country filter
+  // Remote-only clients: job must be remote or flexible
   if (client.workModePreference === WorkMode.REMOTE) {
     const locLower = job.location.toLowerCase();
-    const isRemote =
-      job.workMode === WorkMode.REMOTE ||
-      job.workMode === WorkMode.FLEXIBLE ||
+    const locationIsRemote =
       locLower.includes("remote") ||
       locLower.includes("worldwide") ||
       locLower.includes("anywhere");
+    const isRemote =
+      job.workMode === WorkMode.REMOTE ||
+      job.workMode === WorkMode.FLEXIBLE ||
+      locationIsRemote;
     if (!isRemote) return false;
-    // Jobs explicitly flagged REMOTE by their provider (Remotive, RemoteOK, etc.) are
-    // location-agnostic — the provider guarantees the role is remote.
-    // Only apply the country filter when workMode was inferred from the location string.
-    if (job.workMode === WorkMode.REMOTE) return true;
-    // Inferred-remote jobs: if client has country prefs, require a country signal.
+    // If the job is remote/flexible AND the location string is explicitly remote/worldwide,
+    // it's location-agnostic — no country check needed.
+    if (locationIsRemote || job.workMode === WorkMode.REMOTE) return true;
+    // Job is FLEXIBLE with a specific location: require a country match.
     if (client.preferredCountries.length > 0) {
       return client.preferredCountries.some((c) => matchesCountry(locLower, c));
     }

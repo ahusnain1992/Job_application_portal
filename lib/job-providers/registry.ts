@@ -23,9 +23,9 @@ export type ProviderManifestEntry = {
 export function buildProviders(): JobProvider[] {
   const providers: JobProvider[] = [];
 
-  // Always-on free providers
-  providers.push(new RemotiveJobProvider());
-  providers.push(new RemoteOKJobProvider());
+  // Free providers (no API key required)
+  // Remotive & RemoteOK excluded — Remotive returns HTTP 526 (Cloudflare down),
+  // RemoteOK returns 0 results (rate-limited). Re-enable when APIs stabilise.
   providers.push(new ArbeitnowJobProvider());
   providers.push(new JobicyJobProvider());
   providers.push(new TheMuseJobProvider());
@@ -70,8 +70,8 @@ export function getProviderManifest(): ProviderManifestEntry[] {
   const apifyKey = !!process.env.APIFY_API_TOKEN;
 
   return [
-    { name: "Remotive",   enabled: true,        keyPresent: true,       type: "free" },
-    { name: "RemoteOK",   enabled: true,        keyPresent: true,       type: "free" },
+    { name: "Remotive",   enabled: false,       keyPresent: true,       type: "free" },
+    { name: "RemoteOK",   enabled: false,       keyPresent: true,       type: "free" },
     { name: "Arbeitnow",  enabled: true,        keyPresent: true,       type: "free" },
     { name: "Jobicy",     enabled: true,        keyPresent: true,       type: "free" },
     { name: "TheMuse",    enabled: true,        keyPresent: true,       type: "free" },

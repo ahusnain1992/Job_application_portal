@@ -3,20 +3,18 @@ import { JobProvider, JobProviderSearch, NormalizedJob } from "./types";
 import { buildJobSearchQueries } from "@/lib/job-providers/search-terms";
 
 type HimalayasJob = {
-  id?: string;
-  slug?: string;
+  guid?: string;
   title?: string;
   companyName?: string;
+  companySlug?: string;
   locationRestrictions?: string[];
-  jobType?: string;
+  employmentType?: string;
   description?: string;
-  publishedAt?: string;
-  salaryCurrency?: string;
-  salaryMin?: number;
-  salaryMax?: number;
-  skills?: string[];
-  url?: string;
-  applyUrl?: string;
+  pubDate?: string;
+  minSalary?: number;
+  maxSalary?: number;
+  categories?: string[];
+  applicationLink?: string;
 };
 
 export class HimalayasJobProvider implements JobProvider {
@@ -41,25 +39,27 @@ export class HimalayasJobProvider implements JobProvider {
 
         for (const job of jobs) {
           if (!job.title || !job.companyName) continue;
+          const applyUrl = job.applicationLink;
+          if (!applyUrl) continue;
 
           const location = job.locationRestrictions?.join(", ") || "Remote";
           results.push({
-            externalId: `himalayas-${job.id ?? job.slug}`,
+            externalId: `himalayas-${job.guid ?? job.companySlug}`,
             sourceName: this.name,
             sourceUrl: "https://himalayas.app",
-            originalJobUrl: job.url,
+            originalJobUrl: applyUrl,
             companyName: job.companyName,
             title: job.title,
             location,
             workMode: WorkMode.REMOTE,
-            employmentType: inferEmployment(job.jobType),
-            salaryMin: job.salaryMin || undefined,
-            salaryMax: job.salaryMax || undefined,
+            employmentType: inferEmployment(job.employmentType),
+            salaryMin: job.minSalary || undefined,
+            salaryMax: job.maxSalary || undefined,
             description: job.description || "",
-            requiredSkills: job.skills || [],
+            requiredSkills: job.categories || [],
             preferredSkills: [],
-            postedDate: job.publishedAt ? new Date(job.publishedAt) : undefined,
-            applyUrl: job.applyUrl || job.url
+            postedDate: job.pubDate ? new Date(job.pubDate) : undefined,
+            applyUrl
           });
         }
       } catch {
