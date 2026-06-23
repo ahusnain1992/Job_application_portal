@@ -7,10 +7,9 @@ import { clusterJobsByResume } from "@/lib/services/resume-match";
 import { Role } from "@prisma/client";
 
 const REC_STYLE: Record<string, { tone: "brand" | "signal" | "warn" | "danger" | "neutral"; label: string }> = {
-  AS_IS:           { tone: "brand",   label: "✅ Apply as-is" },
-  MINOR_TAILORING: { tone: "signal",  label: "✏️ Minor tailoring" },
-  FULL_REWRITE:    { tone: "warn",    label: "🔄 Full rewrite" },
-  NEW_VERSION:     { tone: "danger",  label: "📄 New version" }
+  LEVERAGE:    { tone: "brand",   label: "✏️ Tailor existing" },
+  REWRITE:     { tone: "warn",    label: "🔄 Rewrite for ATS" },
+  NEW_VERSION: { tone: "danger",  label: "🆕 New version" }
 };
 
 export default async function ResumeStrategyPage() {
@@ -58,14 +57,13 @@ export default async function ResumeStrategyPage() {
       <div className="space-y-8">
         {clients.map((client) => {
           const activeJobs = client.jobs;
-          const asIs = activeJobs.filter((j) => j.resumeRecommendation === "AS_IS").length;
-          const minorTailoring = activeJobs.filter((j) => j.resumeRecommendation === "MINOR_TAILORING").length;
-          const fullRewrite = activeJobs.filter((j) => j.resumeRecommendation === "FULL_REWRITE").length;
+          const leverage = activeJobs.filter((j) => j.resumeRecommendation === "LEVERAGE").length;
+          const rewrite = activeJobs.filter((j) => j.resumeRecommendation === "REWRITE").length;
           const newVersion = activeJobs.filter((j) => j.resumeRecommendation === "NEW_VERSION").length;
           const noAnalysis = activeJobs.filter((j) => !j.resumeRecommendation).length;
 
           const clusters = clusterJobsByResume(
-            activeJobs.filter((j) => j.resumeRecommendation && j.resumeRecommendation !== "AS_IS")
+            activeJobs.filter((j) => j.resumeRecommendation && j.resumeRecommendation !== "LEVERAGE")
           );
 
           const pdfsNeeded = clusters.length;
@@ -91,10 +89,10 @@ export default async function ResumeStrategyPage() {
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-4">
-                <MetricCard label="✅ Apply as-is" value={asIs} tone="brand" />
-                <MetricCard label="✏️ Minor tailoring" value={minorTailoring} tone="signal" />
-                <MetricCard label="🔄 Full rewrite" value={fullRewrite} tone="warn" />
-                <MetricCard label="📄 New version" value={newVersion} />
+                <MetricCard label="✏️ Tailor existing" value={leverage} tone="brand" />
+                <MetricCard label="🔄 Rewrite for ATS" value={rewrite} tone="warn" />
+                <MetricCard label="🆕 New version" value={newVersion} />
+                <MetricCard label="⚠ No analysis" value={noAnalysis} />
               </div>
 
               {!client.cvText && (
@@ -126,7 +124,7 @@ export default async function ResumeStrategyPage() {
                           </div>
                           <div className="mt-2 space-y-1">
                             {cluster.jobs.slice(0, 4).map((j) => {
-                              const rec = REC_STYLE[j.recommendation] ?? REC_STYLE.AS_IS;
+                              const rec = REC_STYLE[j.recommendation] ?? REC_STYLE.LEVERAGE;
                               return (
                                 <div key={j.id} className="flex items-center justify-between text-xs text-muted">
                                   <Link href={`/jobs/${j.id}`} className="hover:text-brand">
@@ -142,9 +140,9 @@ export default async function ResumeStrategyPage() {
                           </div>
                         </div>
                       ))}
-                      {asIs > 0 && (
+                      {leverage > 0 && (
                         <div className="rounded-md border border-brand/20 bg-[#ECF7F4] p-3 text-sm text-[#186A5E]">
-                          <strong>{asIs} jobs</strong> can be applied to with the existing resume — no new PDF needed.
+                          <strong>{leverage} jobs</strong> can use the existing resume with minor keyword tailoring — no new PDF needed.
                         </div>
                       )}
                     </div>

@@ -81,7 +81,7 @@ function buildPayload(job: {
     company: job.companyName,
     location: job.location,
     apply_url: job.applyUrl ?? "",
-    recommendation: job.resumeRecommendation ?? "FULL_REWRITE",
+    recommendation: job.resumeRecommendation ?? "REWRITE",
     coverage_score: job.resumeCoverageScore ?? 0,
     missing_keywords: job.missingKeywords,
     instructions: buildInstructions(job.resumeRecommendation, job.missingKeywords),
@@ -97,10 +97,10 @@ function buildInstructions(recommendation: string | null, missing: string[]): st
   if (recommendation === "NEW_VERSION") {
     return `Create a new resume version targeting this specific role. The existing resume has low coverage. Focus on incorporating ${missingText} naturally.`;
   }
-  if (recommendation === "FULL_REWRITE") {
+  if (recommendation === "REWRITE") {
     return `Rewrite the resume to better match this job. Incorporate ${missingText}. Keep the candidate's authentic experience but reframe it to align with the job requirements.`;
   }
-  if (recommendation === "MINOR_TAILORING") {
+  if (recommendation === "LEVERAGE") {
     return `Make minor tailoring to the existing resume. Add or emphasize ${missingText} where relevant.`;
   }
   return missing.length

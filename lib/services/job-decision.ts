@@ -1,56 +1,52 @@
 /**
- * Single source of truth for the combined job + resume recommendation decision.
+ * Single source of truth for the combined job + resume decision.
  *
- * The raw `resumeRecommendation` stored on a Job is the output of keyword
- * analysis ONLY — it has no knowledge of overall job match. This module
- * applies the business rules that combine both signals into one actionable
- * recommendation for employees and admin alike.
+ * We ALWAYS rewrite the resume before applying. The decision is:
+ *   - Can we tailor the existing resume to pass ATS? (LEVERAGE)
+ *   - Does the resume need a full rewrite to pass ATS? (REWRITE / NEW_VERSION)
  *
  * Rule summary:
- *   matchScore < 45  → "do-not-apply" (or "wrong-location" if location warning)
- *   matchScore 45-69 → apply-as-is (if resume=AS_IS) / tailor / rewrite
- *   matchScore 70+   → check resume: apply-as-is / tailor / rewrite / find-apply-link
- *   No resume text   → "missing-resume-text" (can't make a good decision)
- *   No applyUrl      → "find-apply-link" (only matters when would otherwise apply)
+ *   matchScore < 45  → skip (poor job fit)
+ *   matchScore ≥ 45  → resume ATS check determines how much rewriting is needed:
+ *     LEVERAGE     → tailor existing resume (≥70% keyword coverage)
+ *     REWRITE      → rewrite resume (40–69% keyword coverage)
+ *     NEW_VERSION  → new version from scratch (<40% or domain shift)
+ *   No resume text  → "missing-resume-text"
+ *   No applyUrl     → "find-apply-link"
  */
 
 export type NextAction =
-  | "apply-as-is"        // Ready — go apply now
-  | "tailor-resume"      // Good match, small resume tweaks first
-  | "rewrite-resume"     // Good/medium match, resume needs major work
-  | "do-not-apply"       // Poor match — skip this job
-  | "find-apply-link"    // Strong match but no apply URL found
-  | "wrong-location"     // Location doesn't match client preferences
+  | "tailor-resume"       // ATS: ≥70% match — tailor existing resume, add missing keywords
+  | "rewrite-resume"      // ATS: 40–69% match — rewrite around the JD to pass ATS
+  | "new-resume-version"  // ATS: <40% or domain shift — new targeted version from scratch
+  | "do-not-apply"        // Poor job fit — skip
+  | "find-apply-link"     // Good fit but no apply URL found
+  | "wrong-location"      // Location mismatch
   | "missing-resume-text"; // No resume text to analyse
 
 export type JobFitLabel = "High" | "Medium" | "Low";
-export type ResumeFitLabel = "Strong" | "Medium" | "Weak" | "Missing";
+export type ATSLabel = "High" | "Medium" | "Low" | "Missing";
 
 export type JobDecision = {
   nextAction: NextAction;
   jobFitLabel: JobFitLabel;
   jobFitScore: number;
-  resumeFitLabel: ResumeFitLabel;
+  /** ATS pass likelihood label based on keyword coverage */
+  atsLabel: ATSLabel;
+  /** Raw keyword coverage score 0–100 (ATS match score) */
   resumeFitScore: number | null;
-  /** true only when nextAction === "apply-as-is" */
-  isEmployeeReady: boolean;
-  /** true when the job needs a full resume rewrite before applying */
+  /** @deprecated use atsLabel */
+  resumeFitLabel: ATSLabel;
   needsRewrite: boolean;
-  /** true when job should be skipped / is not worth pursuing */
   shouldSkip: boolean;
-  /** Human-readable label for the next action */
   actionLabel: string;
-  /** UI colour tone */
   actionTone: "brand" | "signal" | "warn" | "danger" | "neutral";
-  /** Lower number = higher priority in the employee queue */
   queuePriority: number;
 };
 
-// ── Thresholds ───────────────────────────────────────────────────────────────
 const HIGH_MATCH = 70;
 const LOW_MATCH = 45;
 
-// ── Decision helper ───────────────────────────────────────────────────────────
 export function deriveJobDecision(params: {
   matchScore: number;
   resumeRecommendation: string | null | undefined;
@@ -58,81 +54,52 @@ export function deriveJobDecision(params: {
   applyUrl: string | null | undefined;
   matchWarnings?: string[];
 }): JobDecision {
-  const {
-    matchScore,
-    resumeRecommendation,
-    resumeCoverageScore,
-    applyUrl,
-    matchWarnings = [],
-  } = params;
+  const { matchScore, resumeRecommendation, resumeCoverageScore, applyUrl, matchWarnings = [] } = params;
 
-  // ── Job fit label ─────────────────────────────────────────────────────────
   const jobFitLabel: JobFitLabel =
     matchScore >= HIGH_MATCH ? "High" : matchScore >= LOW_MATCH ? "Medium" : "Low";
 
-  // ── Resume fit label ──────────────────────────────────────────────────────
-  const resumeFitLabel: ResumeFitLabel = !resumeRecommendation
+  // ATS label based on keyword coverage score
+  const atsLabel: ATSLabel = !resumeRecommendation
     ? "Missing"
     : resumeCoverageScore != null
-    ? resumeCoverageScore >= 75
-      ? "Strong"
-      : resumeCoverageScore >= 55
-      ? "Medium"
-      : "Weak"
-    : resumeRecommendation === "AS_IS"
-    ? "Strong"
-    : resumeRecommendation === "MINOR_TAILORING"
-    ? "Medium"
-    : "Weak";
+    ? resumeCoverageScore >= 70 ? "High" : resumeCoverageScore >= 40 ? "Medium" : "Low"
+    : resumeRecommendation === "LEVERAGE" ? "High"
+    : resumeRecommendation === "REWRITE"  ? "Medium"
+    : "Low";
 
-  // ── Location signal ───────────────────────────────────────────────────────
   const hasLocationWarning = matchWarnings.some(
-    (w) =>
-      w.toLowerCase().includes("location") ||
-      w.toLowerCase().includes("onsite") ||
-      w.toLowerCase().includes("does not clearly match")
+    (w) => w.toLowerCase().includes("location") || w.toLowerCase().includes("onsite") || w.toLowerCase().includes("does not clearly match")
   );
 
-  // ── Core decision tree ────────────────────────────────────────────────────
   let nextAction: NextAction;
 
   if (matchScore < LOW_MATCH) {
     nextAction = hasLocationWarning ? "wrong-location" : "do-not-apply";
   } else if (!resumeRecommendation) {
     nextAction = "missing-resume-text";
-  } else if (matchScore < HIGH_MATCH) {
-    // Medium match — if resume already covers all keywords, let them apply as-is
-    if (resumeRecommendation === "AS_IS") {
-      nextAction = applyUrl ? "apply-as-is" : "find-apply-link";
-    } else if (resumeRecommendation === "FULL_REWRITE" || resumeRecommendation === "NEW_VERSION") {
-      nextAction = "rewrite-resume";
-    } else {
-      nextAction = "tailor-resume";
-    }
+  } else if (!applyUrl) {
+    nextAction = "find-apply-link";
   } else {
-    // High match (70%+)
-    if (resumeRecommendation === "AS_IS") {
-      nextAction = applyUrl ? "apply-as-is" : "find-apply-link";
-    } else if (resumeRecommendation === "MINOR_TAILORING") {
+    // Job fit is acceptable — determine how much resume work is needed to pass ATS
+    if (resumeRecommendation === "LEVERAGE") {
       nextAction = "tailor-resume";
-    } else {
-      // FULL_REWRITE or NEW_VERSION
+    } else if (resumeRecommendation === "REWRITE") {
       nextAction = "rewrite-resume";
+    } else {
+      // NEW_VERSION
+      nextAction = "new-resume-version";
     }
   }
 
-  // ── Display metadata ──────────────────────────────────────────────────────
-  const ACTION_META: Record<
-    NextAction,
-    { label: string; tone: JobDecision["actionTone"]; priority: number }
-  > = {
-    "apply-as-is":        { label: "Apply now",            tone: "brand",    priority: 0 },
-    "tailor-resume":      { label: "Tailor resume first",  tone: "signal",   priority: 1 },
-    "rewrite-resume":     { label: "Rewrite resume",       tone: "warn",     priority: 2 },
-    "find-apply-link":    { label: "Find apply link",      tone: "neutral",  priority: 3 },
-    "missing-resume-text":{ label: "Add resume text",      tone: "neutral",  priority: 4 },
-    "do-not-apply":       { label: "Poor match — skip",    tone: "danger",   priority: 5 },
-    "wrong-location":     { label: "Wrong location",       tone: "danger",   priority: 5 },
+  const ACTION_META: Record<NextAction, { label: string; tone: JobDecision["actionTone"]; priority: number }> = {
+    "tailor-resume":       { label: "Tailor existing resume",    tone: "brand",   priority: 0 },
+    "rewrite-resume":      { label: "Rewrite resume for ATS",    tone: "signal",  priority: 1 },
+    "new-resume-version":  { label: "New resume version needed", tone: "warn",    priority: 2 },
+    "find-apply-link":     { label: "Find apply link",           tone: "neutral", priority: 3 },
+    "missing-resume-text": { label: "Add resume text",           tone: "neutral", priority: 4 },
+    "do-not-apply":        { label: "Poor match — skip",         tone: "danger",  priority: 5 },
+    "wrong-location":      { label: "Wrong location",            tone: "danger",  priority: 5 },
   };
 
   const meta = ACTION_META[nextAction];
@@ -141,10 +108,10 @@ export function deriveJobDecision(params: {
     nextAction,
     jobFitLabel,
     jobFitScore: matchScore,
-    resumeFitLabel,
+    atsLabel,
+    resumeFitLabel: atsLabel,
     resumeFitScore: resumeCoverageScore ?? null,
-    isEmployeeReady: nextAction === "apply-as-is",
-    needsRewrite: nextAction === "rewrite-resume",
+    needsRewrite: nextAction === "rewrite-resume" || nextAction === "new-resume-version",
     shouldSkip: nextAction === "do-not-apply" || nextAction === "wrong-location",
     actionLabel: meta.label,
     actionTone: meta.tone,
@@ -152,7 +119,6 @@ export function deriveJobDecision(params: {
   };
 }
 
-// Convenience: derive from a plain job-shaped object
 export function jobDecisionFromRow(job: {
   matchScore: number;
   resumeRecommendation: string | null;

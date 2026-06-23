@@ -239,9 +239,9 @@ export default async function JobDetailPage({
           {job.matchScore}% — {jobDecision.jobFitLabel} fit
         </Badge>
         {/* Resume fit */}
-        {jobDecision.resumeFitLabel !== "Missing" && (
-          <Badge tone={jobDecision.resumeFitLabel === "Strong" ? "brand" : jobDecision.resumeFitLabel === "Medium" ? "signal" : "warn"}>
-            Resume: {jobDecision.resumeFitLabel}
+        {jobDecision.atsLabel !== "Missing" && (
+          <Badge tone={jobDecision.atsLabel === "High" ? "brand" : jobDecision.atsLabel === "Medium" ? "signal" : "warn"}>
+            ATS: {jobDecision.atsLabel}
             {job.resumeCoverageScore != null ? ` (${job.resumeCoverageScore}%)` : ""}
           </Badge>
         )}
@@ -510,13 +510,13 @@ function ResumeRecommendationPanel({
   });
 
   const bannerStyle = {
-    "apply-as-is":        { bg: "bg-[#ECF7F4]", border: "border-brand/30",    text: "text-[#186A5E]",  emoji: "✅", headline: "Ready to apply — use the current resume" },
-    "tailor-resume":      { bg: "bg-[#EEF5FF]", border: "border-signal/30",   text: "text-[#1D4ED8]",  emoji: "✏️", headline: "Tailor the resume before applying" },
-    "rewrite-resume":     { bg: "bg-[#FFF6EB]", border: "border-warn/30",     text: "text-[#8A4604]",  emoji: "🔄", headline: "Resume needs a rewrite — use resume builder first" },
-    "find-apply-link":    { bg: "bg-canvas",     border: "border-line",        text: "text-ink",        emoji: "🔗", headline: "Good match — but no apply link found yet" },
-    "missing-resume-text":{ bg: "bg-canvas",     border: "border-line",        text: "text-muted",      emoji: "📄", headline: "No resume text on file — job matching unavailable" },
-    "do-not-apply":       { bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700",    emoji: "✗",  headline: "Poor overall match — do not apply" },
-    "wrong-location":     { bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700",    emoji: "📍", headline: "Location does not match client preferences" },
+    "tailor-resume":       { bg: "bg-[#ECF7F4]", border: "border-brand/30",    text: "text-[#186A5E]",  emoji: "✏️", headline: "Tailor existing resume — ATS keyword match is strong" },
+    "rewrite-resume":      { bg: "bg-[#EEF5FF]", border: "border-signal/30",   text: "text-[#1D4ED8]",  emoji: "🔄", headline: "Rewrite resume for ATS — too many keyword gaps to pass as-is" },
+    "new-resume-version":  { bg: "bg-[#FFF6EB]", border: "border-warn/30",     text: "text-[#8A4604]",  emoji: "🆕", headline: "New resume version needed — domain or keyword mismatch" },
+    "find-apply-link":     { bg: "bg-canvas",     border: "border-line",        text: "text-ink",        emoji: "🔗", headline: "Good match — but no apply link found yet" },
+    "missing-resume-text": { bg: "bg-canvas",     border: "border-line",        text: "text-muted",      emoji: "📄", headline: "No resume text on file — ATS analysis unavailable" },
+    "do-not-apply":        { bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700",    emoji: "✗",  headline: "Poor overall match — do not apply" },
+    "wrong-location":      { bg: "bg-red-50",     border: "border-red-200",     text: "text-red-700",    emoji: "📍", headline: "Location does not match client preferences" },
   } as const;
 
   const style = bannerStyle[decision.nextAction];
@@ -529,8 +529,8 @@ function ResumeRecommendationPanel({
         </div>
         <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted">
           <span>Job fit: <strong className={decision.jobFitLabel === "High" ? "text-brand" : decision.jobFitLabel === "Medium" ? "text-blue-600" : "text-red-600"}>{decision.jobFitLabel} ({matchScore}%)</strong></span>
-          {decision.resumeFitLabel !== "Missing" && (
-            <span>Resume fit: <strong>{decision.resumeFitLabel}{job.resumeCoverageScore != null ? ` (${job.resumeCoverageScore}%)` : ""}</strong></span>
+          {decision.atsLabel !== "Missing" && (
+            <span>ATS match: <strong>{decision.atsLabel}{job.resumeCoverageScore != null ? ` (${job.resumeCoverageScore}%)` : ""}</strong></span>
           )}
         </div>
       </div>
@@ -580,7 +580,7 @@ function BestResumePanel({ job }: {
   }
 }) {
   const recommendation = job.resumeRecommendation;
-  const needsRewrite = recommendation === "FULL_REWRITE" || recommendation === "NEW_VERSION";
+  const needsRewrite = recommendation === "REWRITE" || recommendation === "NEW_VERSION";
   // Use raw resumeRecommendation here — BestResumePanel is about WHICH resume to use,
   // not the combined decision. The combined decision is shown in ResumeRecommendationPanel.
   const hasResumes = job.client.resumes.length > 0;
@@ -602,14 +602,14 @@ function BestResumePanel({ job }: {
           <div className={`rounded-md border px-4 py-3 ${
             needsRewrite
               ? "border-warn/40 bg-[#FFF6EB]"
-              : recommendation === "MINOR_TAILORING"
-              ? "border-blue-200 bg-blue-50"
-              : "border-brand/30 bg-[#ECF7F4]"
+              : recommendation === "LEVERAGE"
+              ? "border-brand/30 bg-[#ECF7F4]"
+              : "border-blue-200 bg-blue-50"
           }`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${needsRewrite ? "text-[#8A4604]" : "text-[#186A5E]"}`}>
-                  {needsRewrite ? "⚠ Rewrite recommended" : recommendation === "MINOR_TAILORING" ? "✏️ Minor tailoring" : "✅ Use as-is"}
+                  {needsRewrite ? (recommendation === "NEW_VERSION" ? "🆕 New version needed" : "🔄 Rewrite for ATS") : "✏️ Tailor existing resume"}
                 </div>
                 <div className="font-semibold text-sm text-ink">{bestResume.name}</div>
                 {job.resumeCoverageScore !== null && (

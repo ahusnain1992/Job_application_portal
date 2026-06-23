@@ -36,7 +36,7 @@ export default async function AdminDashboard() {
     // Jobs still needing resume rewrite before applying
     prisma.job.count({
       where: {
-        resumeRecommendation: { in: ["FULL_REWRITE", "NEW_VERSION"] },
+        resumeRecommendation: { in: ["REWRITE", "NEW_VERSION"] },
         status: { in: [JobStatus.SUGGESTED, JobStatus.APPROVED, JobStatus.ASSIGNED, JobStatus.NEW] }
       }
     }),

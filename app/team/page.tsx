@@ -195,7 +195,7 @@ export default async function TeamDashboard() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {topJobs.map((job) => {
                 const rec = job.resumeRecommendation;
-                const needsRewrite = rec === "FULL_REWRITE" || rec === "NEW_VERSION";
+                const needsRewrite = rec === "REWRITE" || rec === "NEW_VERSION";
                 const isStrong = job.matchScore >= 65 && !needsRewrite;
                 return (
                   <Link

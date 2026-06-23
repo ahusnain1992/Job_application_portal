@@ -1,13 +1,25 @@
-export type ResumeRecommendation = "AS_IS" | "MINOR_TAILORING" | "FULL_REWRITE" | "NEW_VERSION";
+/**
+ * ATS pass likelihood — how much work is needed to make the resume pass
+ * the company's ATS (Applicant Tracking System) for this specific job.
+ *
+ * We ALWAYS rewrite the resume before applying. The question is:
+ *   LEVERAGE  — existing resume is a strong ATS match; add missing keywords,
+ *               adjust phrasing. Same base document.
+ *   REWRITE   — significant keyword gaps; ATS will likely reject as-is.
+ *               Restructure and reframe existing experience around the JD.
+ *   NEW_VERSION — domain/role shift or very low overlap; start a new
+ *                 targeted version from scratch.
+ */
+export type ResumeRecommendation = "LEVERAGE" | "REWRITE" | "NEW_VERSION";
 
 export type ResumeAnalysis = {
   recommendation: ResumeRecommendation;
-  coverageScore: number;          // 0–100: how much of the job is covered by the CV
-  missingKeywords: string[];      // skills/keywords in job but NOT in CV
-  coveredKeywords: string[];      // skills/keywords found in both
+  coverageScore: number;          // 0–100: % of job keywords found in resume (ATS match score)
+  missingKeywords: string[];      // keywords in JD but NOT in resume — add these to pass ATS
+  coveredKeywords: string[];      // keywords found in both — ATS will pick these up
   recommendationLabel: string;    // human-readable label
   recommendationReason: string;   // plain-English explanation
-  clusterId?: string;             // for grouping similar jobs (same resume can cover)
+  clusterId?: string;             // for grouping similar jobs (same resume version can cover)
 };
 
 // Technical skills, tools, and common job requirement terms to extract
@@ -141,26 +153,26 @@ export function analyzeResumeJobFit(
   let recommendationLabel: string;
   let recommendationReason: string;
 
+  // ATS pass likelihood thresholds:
+  //   ≥70% keyword coverage → existing resume will likely pass ATS — leverage & tailor it
+  //   40–69%                → too many gaps for ATS to pass — rewrite around the JD
+  //   <40% or domain shift  → role/domain mismatch — new targeted version needed
   if (domainShift) {
     recommendation = "NEW_VERSION";
-    recommendationLabel = "📄 New resume version needed";
-    recommendationReason = `This role (${jobTitle}) is in a different domain than the client's primary experience. A targeted resume version focusing on relevant transferable skills will significantly improve response rates.`;
-  } else if (coverageScore >= 75) {
-    recommendation = "AS_IS";
-    recommendationLabel = "✅ Apply as-is";
-    recommendationReason = `The current resume covers ${coverageScore}% of this job's requirements. Strong match — no rewrite needed. ${missing.length > 0 ? `Minor missing terms: ${missing.slice(0, 3).join(", ")}` : ""}`;
-  } else if (coverageScore >= 55) {
-    recommendation = "MINOR_TAILORING";
-    recommendationLabel = "✏️ Minor tailoring recommended";
-    recommendationReason = `The resume covers ${coverageScore}% of requirements. Adding ${missing.slice(0, 4).join(", ")} to the skills section or summary would improve ATS scoring significantly.`;
-  } else if (coverageScore >= 35) {
-    recommendation = "FULL_REWRITE";
-    recommendationLabel = "🔄 Resume rewrite recommended";
-    recommendationReason = `Only ${coverageScore}% of job requirements appear in the current resume. Key missing items: ${missing.slice(0, 5).join(", ")}. A targeted rewrite will significantly improve callback rate.`;
+    recommendationLabel = "🆕 New version needed";
+    recommendationReason = `This role (${jobTitle}) is outside the client's primary domain. ATS will likely reject the current resume. A new targeted version built around this JD is required.`;
+  } else if (coverageScore >= 70) {
+    recommendation = "LEVERAGE";
+    recommendationLabel = "✏️ Tailor existing resume";
+    recommendationReason = `ATS score: ${coverageScore}% keyword match. The existing resume is a strong base — tailor it by weaving in the missing terms (${missing.slice(0, 4).join(", ") || "none"}) and mirroring the JD language to maximise ATS pass rate.`;
+  } else if (coverageScore >= 40) {
+    recommendation = "REWRITE";
+    recommendationLabel = "🔄 Rewrite resume";
+    recommendationReason = `ATS score: ${coverageScore}% keyword match. Too many gaps for the current resume to pass ATS. Rewrite experience bullets to target this JD — prioritise adding: ${missing.slice(0, 6).join(", ")}.`;
   } else {
     recommendation = "NEW_VERSION";
-    recommendationLabel = "📄 New resume version needed";
-    recommendationReason = `Only ${coverageScore}% overlap with job requirements. Missing critical skills: ${missing.slice(0, 6).join(", ")}. A new targeted version is strongly recommended.`;
+    recommendationLabel = "🆕 New version needed";
+    recommendationReason = `ATS score: ${coverageScore}% — critical keyword gap. The current resume will be filtered out by ATS. A new version built specifically around this JD is needed. Missing: ${missing.slice(0, 6).join(", ")}.`;
   }
 
   // Generate cluster ID based on top required skills (for grouping similar jobs)
@@ -241,7 +253,7 @@ export function clusterJobsByResume(
   const clusterMap = new Map<string, JobCluster>();
 
   for (const job of jobs) {
-    if (job.resumeRecommendation === "AS_IS") continue; // No new PDF needed
+    if (job.resumeRecommendation === "LEVERAGE") continue; // Tailor existing — no new PDF needed
 
     const skills = [...(job.coveredKeywords || []), ...(job.missingKeywords || [])]
       .map(normalize)

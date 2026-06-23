@@ -99,9 +99,9 @@ export default async function QueuePage({ searchParams }: { searchParams: { clie
     return b.matchScore - a.matchScore;
   });
 
-  const applyNow     = sorted.filter((j) => j.decision.nextAction === "apply-as-is");
-  const tailorFirst  = sorted.filter((j) => j.decision.nextAction === "tailor-resume");
-  const needsRewrite = sorted.filter((j) => j.decision.nextAction === "rewrite-resume");
+  const applyNow     = sorted.filter((j) => j.decision.nextAction === "tailor-resume");
+  const tailorFirst  = sorted.filter((j) => j.decision.nextAction === "rewrite-resume");
+  const needsRewrite = sorted.filter((j) => j.decision.nextAction === "new-resume-version");
   const blocked      = sorted.filter((j) =>
     j.decision.nextAction === "find-apply-link" || j.decision.nextAction === "missing-resume-text"
   );
@@ -316,7 +316,7 @@ function QueueCard({ job, showClient }: { job: QueueJob; showClient: boolean }) 
       </div>
 
       {/* Recommended resume name */}
-      {job.bestResumeName && decision.nextAction === "apply-as-is" && (
+      {job.bestResumeName && decision.nextAction === "tailor-resume" && (
         <div className="mt-2 flex items-center gap-1 text-xs text-brand truncate">
           <FileText size={10} className="shrink-0" />
           <span className="truncate">Use: {job.bestResumeName}</span>
