@@ -3,9 +3,11 @@ import { AppShell } from "@/components/shell";
 import { Badge, PageHeader, Panel, Select, SubmitButton, TextArea, TextInput } from "@/components/ui";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getProviderManifest } from "@/lib/job-providers/registry";
 
 export default async function SettingsPage({ searchParams }: { searchParams: { error?: string } }) {
   await requireRole(Role.ADMIN);
+  const providerManifest = getProviderManifest();
   const [sources, teamMembers, dailyTargets] = await Promise.all([
     prisma.jobSource.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.user.findMany({ where: { role: Role.TEAM_MEMBER }, orderBy: { name: "asc" } }),
@@ -77,6 +79,35 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
             ))}
           </div>
         </Panel>
+      </div>
+
+      <h2 className="mb-4 text-lg font-semibold text-ink">Job provider status</h2>
+      <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        Provider selection is controlled by Railway environment variables, not this table. Records here are created automatically when jobs are fetched.
+      </div>
+      <div className="mb-8 overflow-x-auto rounded-md border border-line">
+        <table className="w-full text-sm">
+          <thead className="bg-surface text-left text-xs font-semibold uppercase text-muted">
+            <tr>
+              <th className="px-4 py-2">Provider</th>
+              <th className="px-4 py-2">Type</th>
+              <th className="px-4 py-2">Key Present</th>
+              <th className="px-4 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {providerManifest.map((p) => (
+              <tr key={p.name} className="border-t border-line">
+                <td className="px-4 py-2 font-medium text-ink">{p.name}</td>
+                <td className="px-4 py-2 text-muted capitalize">{p.type}</td>
+                <td className="px-4 py-2">{p.keyPresent ? <span className="text-green-600">Yes</span> : <span className="text-muted">No</span>}</td>
+                <td className="px-4 py-2">
+                  <Badge tone={p.enabled ? "brand" : "neutral"}>{p.enabled ? "Enabled" : "Disabled"}</Badge>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <h2 className="mb-4 text-lg font-semibold text-ink">Job source integrations</h2>

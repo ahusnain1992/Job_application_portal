@@ -19,16 +19,16 @@ function d(overrides: {
 
 describe("deriveJobDecision", () => {
   // ── Low match gate ────────────────────────────────────────────────────────
-  test("20% match + AS_IS + 100% coverage → do-not-apply, NOT apply-as-is", () => {
+  test("20% match + AS_IS + 100% coverage → do-not-apply, NOT tailor-resume", () => {
     const r = d({ matchScore: 20, resumeRecommendation: "AS_IS", resumeCoverageScore: 100 });
     expect(r.nextAction).toBe("do-not-apply");
-    expect(r.isEmployeeReady).toBe(false);
+    expect(r.shouldSkip).toBe(true);
   });
 
-  test("20% match never shows apply-as-is regardless of resume", () => {
+  test("20% match never shows tailor-resume regardless of resume", () => {
     for (const rec of ["AS_IS", "MINOR_TAILORING", "FULL_REWRITE", "NEW_VERSION", null]) {
       const r = d({ matchScore: 20, resumeRecommendation: rec });
-      expect(r.nextAction).not.toBe("apply-as-is");
+      expect(r.nextAction).not.toBe("tailor-resume");
     }
   });
 
@@ -46,24 +46,23 @@ describe("deriveJobDecision", () => {
   });
 
   // ── Medium match gate (45-69%) ────────────────────────────────────────────
-  test("60% match + AS_IS → tailor-resume (not apply-as-is)", () => {
+  test("60% match + AS_IS (mapped to LEVERAGE) → tailor-resume", () => {
     const r = d({ matchScore: 60, resumeRecommendation: "AS_IS", resumeCoverageScore: 90 });
     expect(r.nextAction).toBe("tailor-resume");
-    expect(r.isEmployeeReady).toBe(false);
   });
 
-  test("60% match + MINOR_TAILORING → tailor-resume", () => {
+  test("60% match + MINOR_TAILORING (mapped to LEVERAGE) → tailor-resume", () => {
     expect(d({ matchScore: 60, resumeRecommendation: "MINOR_TAILORING" }).nextAction).toBe("tailor-resume");
   });
 
-  test("60% match + weak resume → rewrite-resume", () => {
+  test("60% match + weak resume FULL_REWRITE (mapped to REWRITE) → rewrite-resume", () => {
     const r = d({ matchScore: 60, resumeRecommendation: "FULL_REWRITE", resumeCoverageScore: 40 });
     expect(r.nextAction).toBe("rewrite-resume");
     expect(r.needsRewrite).toBe(true);
   });
 
-  test("65% match + NEW_VERSION → rewrite-resume", () => {
-    expect(d({ matchScore: 65, resumeRecommendation: "NEW_VERSION" }).nextAction).toBe("rewrite-resume");
+  test("65% match + NEW_VERSION → new-resume-version", () => {
+    expect(d({ matchScore: 65, resumeRecommendation: "NEW_VERSION" }).nextAction).toBe("new-resume-version");
   });
 
   test("no resume text at medium match → missing-resume-text", () => {
@@ -71,16 +70,14 @@ describe("deriveJobDecision", () => {
   });
 
   // ── High match gate (70%+) ────────────────────────────────────────────────
-  test("70% match + AS_IS + applyUrl → apply-as-is", () => {
+  test("70% match + AS_IS (LEVERAGE) + applyUrl → tailor-resume", () => {
     const r = d({ matchScore: 70, resumeRecommendation: "AS_IS", applyUrl: "https://example.com" });
-    expect(r.nextAction).toBe("apply-as-is");
-    expect(r.isEmployeeReady).toBe(true);
+    expect(r.nextAction).toBe("tailor-resume");
   });
 
-  test("75% match + AS_IS + applyUrl → apply-as-is", () => {
+  test("75% match + AS_IS (LEVERAGE) + applyUrl → tailor-resume", () => {
     const r = d({ matchScore: 75, resumeRecommendation: "AS_IS", applyUrl: "https://example.com" });
-    expect(r.nextAction).toBe("apply-as-is");
-    expect(r.isEmployeeReady).toBe(true);
+    expect(r.nextAction).toBe("tailor-resume");
   });
 
   test("75% match + MINOR_TAILORING → tailor-resume", () => {
@@ -94,7 +91,7 @@ describe("deriveJobDecision", () => {
   test("80% match + AS_IS + missing applyUrl → find-apply-link", () => {
     const r = d({ matchScore: 80, resumeRecommendation: "AS_IS", applyUrl: null });
     expect(r.nextAction).toBe("find-apply-link");
-    expect(r.isEmployeeReady).toBe(false);
+    expect(r.shouldSkip).toBe(false);
   });
 
   test("no resume text at high match → missing-resume-text", () => {
@@ -108,19 +105,19 @@ describe("deriveJobDecision", () => {
     expect(d({ matchScore: 30 }).jobFitLabel).toBe("Low");
   });
 
-  test("resume fit labels from coverageScore", () => {
-    expect(d({ matchScore: 75, resumeRecommendation: "AS_IS", resumeCoverageScore: 80 }).resumeFitLabel).toBe("Strong");
-    expect(d({ matchScore: 75, resumeRecommendation: "MINOR_TAILORING", resumeCoverageScore: 60 }).resumeFitLabel).toBe("Medium");
-    expect(d({ matchScore: 75, resumeRecommendation: "FULL_REWRITE", resumeCoverageScore: 40 }).resumeFitLabel).toBe("Weak");
-    expect(d({ matchScore: 75, resumeRecommendation: null }).resumeFitLabel).toBe("Missing");
+  test("resume fit labels (atsLabel) from coverageScore", () => {
+    expect(d({ matchScore: 75, resumeRecommendation: "AS_IS", resumeCoverageScore: 80 }).atsLabel).toBe("High");
+    expect(d({ matchScore: 75, resumeRecommendation: "MINOR_TAILORING", resumeCoverageScore: 60 }).atsLabel).toBe("Medium");
+    expect(d({ matchScore: 75, resumeRecommendation: "FULL_REWRITE", resumeCoverageScore: 40 }).atsLabel).toBe("Medium");
+    expect(d({ matchScore: 75, resumeRecommendation: null }).atsLabel).toBe("Missing");
   });
 
-  // ── Employee queue: only apply-as-is is employee-ready ───────────────────
-  test("isEmployeeReady only for apply-as-is", () => {
-    expect(d({ matchScore: 80, resumeRecommendation: "AS_IS", applyUrl: "https://x.com" }).isEmployeeReady).toBe(true);
-    expect(d({ matchScore: 80, resumeRecommendation: "MINOR_TAILORING" }).isEmployeeReady).toBe(false);
-    expect(d({ matchScore: 80, resumeRecommendation: "FULL_REWRITE" }).isEmployeeReady).toBe(false);
-    expect(d({ matchScore: 40, resumeRecommendation: "AS_IS" }).isEmployeeReady).toBe(false);
+  // ── needsRewrite ─────────────────────────────────────────────────────────
+  test("needsRewrite is true for rewrite-resume and new-resume-version actions", () => {
+    expect(d({ matchScore: 80, resumeRecommendation: "AS_IS", applyUrl: "https://x.com" }).needsRewrite).toBe(false);
+    expect(d({ matchScore: 80, resumeRecommendation: "FULL_REWRITE", applyUrl: "https://x.com" }).needsRewrite).toBe(true);
+    expect(d({ matchScore: 80, resumeRecommendation: "NEW_VERSION", applyUrl: "https://x.com" }).needsRewrite).toBe(true);
+    expect(d({ matchScore: 40, resumeRecommendation: "AS_IS" }).needsRewrite).toBe(false);
   });
 
   // ── shouldSkip ────────────────────────────────────────────────────────────
@@ -131,7 +128,7 @@ describe("deriveJobDecision", () => {
   });
 
   // ── Queue priorities ──────────────────────────────────────────────────────
-  test("apply-as-is has highest queue priority (0)", () => {
+  test("tailor-resume has highest queue priority (0)", () => {
     const r = d({ matchScore: 80, resumeRecommendation: "AS_IS" });
     expect(r.queuePriority).toBe(0);
   });

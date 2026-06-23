@@ -28,7 +28,7 @@ const dataEngineerJob = {
 };
 
 describe("analyzeResumeJobFit", () => {
-  it("AS_IS for strong CV that covers ≥75% of keywords", () => {
+  it("LEVERAGE for strong CV that covers ≥75% of keywords", () => {
     const result = analyzeResumeJobFit(
       strongCv,
       dataEngineerJob.description,
@@ -36,12 +36,12 @@ describe("analyzeResumeJobFit", () => {
       dataEngineerJob.jobTitle,
       dataEngineerJob.clientJobTitle
     );
-    expect(result.recommendation).toBe("AS_IS");
+    expect(result.recommendation).toBe("LEVERAGE");
     expect(result.coverageScore).toBeGreaterThanOrEqual(75);
     expect(result.coveredKeywords.length).toBeGreaterThan(0);
   });
 
-  it("FULL_REWRITE or NEW_VERSION for completely unrelated CV", () => {
+  it("REWRITE or NEW_VERSION for completely unrelated CV", () => {
     const result = analyzeResumeJobFit(
       weakCv,
       dataEngineerJob.description,
@@ -49,7 +49,7 @@ describe("analyzeResumeJobFit", () => {
       dataEngineerJob.jobTitle,
       "Marketing Manager"
     );
-    expect(["FULL_REWRITE", "NEW_VERSION"]).toContain(result.recommendation);
+    expect(["REWRITE", "NEW_VERSION"]).toContain(result.recommendation);
     expect(result.coverageScore).toBeLessThan(55);
     expect(result.missingKeywords.length).toBeGreaterThan(0);
   });

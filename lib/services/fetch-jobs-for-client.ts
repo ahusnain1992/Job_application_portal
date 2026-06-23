@@ -29,10 +29,11 @@ type ClientWithResumes = {
 };
 
 export type FetchSummary = {
-  jobsFetched: number;
-  jobsSaved: number;
+  jobsFetched: number;      // raw jobs from providers before filtering
+  jobsSaved: number;        // actually written to DB
   duplicatesSkipped: number;
-  noApplyLink: number;
+  noApplyLink: number;      // had no applyUrl — skipped
+  filteredOut: number;      // failed isJobRelevant — wrong title/location
   errors: string[];
   providerStats: Record<string, { fetched: number; error?: string }>;
 };
@@ -41,9 +42,14 @@ export async function fetchJobsForClient(
   client: ClientWithResumes,
   options: { postedWithinDays?: number } = {}
 ): Promise<FetchSummary> {
-  const summary: FetchSummary = { jobsFetched: 0, jobsSaved: 0, duplicatesSkipped: 0, noApplyLink: 0, errors: [], providerStats: {} };
+  const summary: FetchSummary = { jobsFetched: 0, jobsSaved: 0, duplicatesSkipped: 0, noApplyLink: 0, filteredOut: 0, errors: [], providerStats: {} };
 
   const providers = buildProviders();
+
+  if (providers.length === 0) {
+    summary.errors.push("No job providers are configured. Add Adzuna or Apify credentials in Railway environment variables.");
+    return summary;
+  }
 
   const search = {
     titles: [...client.targetJobTitles, ...client.alternativeJobTitles].slice(0, 4),
@@ -82,11 +88,10 @@ export async function fetchJobsForClient(
 
   // Filter: must match client preferences AND have an apply link
   const relevantJobs = allJobs.filter((job) => {
-    if (!isJobRelevant(job, client)) return false;
     if (!job.applyUrl?.trim()) { summary.noApplyLink++; return false; }
+    if (!isJobRelevant(job, client)) { summary.filteredOut++; return false; }
     return true;
   });
-  summary.jobsFetched -= (allJobs.length - relevantJobs.length - summary.noApplyLink);
 
   await ensureSources(providers.map((p) => p.name));
   const sourceMap = Object.fromEntries(
