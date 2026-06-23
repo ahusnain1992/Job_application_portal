@@ -150,13 +150,14 @@ export function AddClientForm({ teamMembers }: AddClientFormProps) {
       errs.mainSkills = "Please add at least one main skill.";
     }
 
-    // Target titles — TagInput flushes pending via onBlur before submit
-    const titlesVal = String(data.get("targetJobTitles") || "").trim();
-    const effectiveTitles = [
-      ...titlesVal.split(",").map(s => s.trim()).filter(Boolean),
-      ...targetTitles.filter(t => !titlesVal.includes(t))
-    ];
-    if (effectiveTitles.length === 0) {
+    // Target titles — check DOM hidden input (always sync via syncHidden) AND React state
+    // DOM is set synchronously by syncHidden even before React processes state updates
+    const titlesHiddenEl = form.elements.namedItem("targetJobTitles") as HTMLInputElement | null;
+    const titlesFromDom = titlesHiddenEl?.value?.trim() ?? "";
+    const effectiveTitleCount = titlesFromDom
+      ? titlesFromDom.split(",").map(s => s.trim()).filter(Boolean).length
+      : targetTitles.length;
+    if (effectiveTitleCount === 0) {
       errs.targetJobTitles = "Please add at least one target job title.";
     }
 
@@ -224,6 +225,25 @@ export function AddClientForm({ teamMembers }: AddClientFormProps) {
 
     setErrors({});
     setSubmitting(true);
+
+    // Sync tag state to hidden inputs right before native submit.
+    // Merge DOM value (set synchronously by syncHidden on every tag change) with React state
+    // (covers both: DOM-reset-by-React and state-stale-from-blur-timing scenarios).
+    const titlesHidden = form.elements.namedItem("targetJobTitles") as HTMLInputElement | null;
+    if (titlesHidden) {
+      const fromDom = titlesHidden.value.split(",").map(s => s.trim()).filter(Boolean);
+      const merged = [...new Set([...fromDom, ...targetTitles])];
+      titlesHidden.value = merged.join(", ");
+    }
+
+    const skillsHidden = form.elements.namedItem("mainSkills") as HTMLInputElement | null;
+    const pendingSkillFinal = skillInput.trim();
+    if (skillsHidden) {
+      const fromSkillsDom = skillsHidden.value.split(",").map(s => s.trim()).filter(Boolean);
+      const effectiveSkills = [...new Set([...fromSkillsDom, ...mainSkills, ...(pendingSkillFinal ? [pendingSkillFinal] : [])])];
+      skillsHidden.value = effectiveSkills.join(", ");
+    }
+
     form.submit();
   }
 

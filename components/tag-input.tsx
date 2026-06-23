@@ -63,8 +63,19 @@ export function TagInput({ name, defaultValue = "", placeholder = "Type and pres
     const val = e.target.value;
     if (val.includes(",")) {
       const parts = val.split(",");
-      parts.slice(0, -1).forEach((p) => addTag(p));
-      setInput(parts[parts.length - 1]);
+      const toAdd = parts.slice(0, -1).map((p) => p.trim()).filter(Boolean);
+      const remaining = parts[parts.length - 1];
+      if (toAdd.length > 0) {
+        // Build next from current tags all at once — avoids stale-closure bug when pasting multiple values
+        const next = [...tags];
+        for (const p of toAdd) {
+          if (!next.includes(p)) next.push(p);
+        }
+        setTags(next);
+        onTagsChange?.(next);
+        syncHidden(next);
+      }
+      setInput(remaining);
     } else {
       setInput(val);
     }
