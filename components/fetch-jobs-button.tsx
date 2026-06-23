@@ -55,8 +55,13 @@ export function FetchJobsButton({ lastRunAt }: { lastRunAt: string | null }) {
         return;
       }
       setState("success");
+      const providerLines = data.providerStats
+        ? Object.entries(data.providerStats as Record<string, { fetched: number; error?: string }>)
+            .map(([name, s]) => s.error ? `${name}: ❌ ${s.error.slice(0, 80)}` : `${name}: ${s.fetched} jobs`)
+            .join(" | ")
+        : "";
       setSummary(
-        `${data.jobsSaved ?? 0} new jobs saved · ${data.jobsFetched ?? 0} fetched · ${data.duplicatesSkipped ?? 0} duplicates skipped`
+        `${data.jobsSaved ?? 0} saved · ${data.jobsFetched ?? 0} fetched · ${data.duplicatesSkipped ?? 0} dupes skipped${providerLines ? " — " + providerLines : ""}${data.errors?.length ? " ⚠ " + data.errors.slice(0, 3).join("; ") : ""}`
       );
       setTimeout(() => window.location.reload(), 2000);
     } catch {

@@ -43,12 +43,12 @@ export class LinkedInJobProvider implements JobProvider {
 
         console.log(`[linkedin] Fetching: ${searchUrl}`);
         const res = await fetch(
-          `https://api.apify.com/v2/acts/bebity~linkedin-jobs-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=90`,
+          `https://api.apify.com/v2/acts/bebity~linkedin-jobs-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=300`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(input),
-            signal: AbortSignal.timeout(120000)
+            signal: AbortSignal.timeout(360000)
           }
         );
         if (!res.ok) {

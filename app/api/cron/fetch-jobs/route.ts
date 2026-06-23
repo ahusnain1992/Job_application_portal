@@ -13,7 +13,8 @@ import { TheMuseJobProvider } from "@/lib/job-providers/themuse";
 import { HimalayasJobProvider } from "@/lib/job-providers/himalayas";
 import { USAJobsProvider } from "@/lib/job-providers/usajobs";
 import { FindWorkJobProvider } from "@/lib/job-providers/findwork";
-import { ApifyJobProvider } from "@/lib/job-providers/apify";
+import { IndeedJobProvider } from "@/lib/job-providers/indeed";
+import { GlassdoorJobProvider } from "@/lib/job-providers/glassdoor";
 import { LinkedInJobProvider } from "@/lib/job-providers/linkedin";
 import { NormalizedJob } from "@/lib/job-providers/types";
 import { duplicateSignature } from "@/lib/services/duplicates";
@@ -56,7 +57,8 @@ export async function GET(req: NextRequest) {
     jobsFetched: 0,
     jobsSaved: 0,
     duplicatesSkipped: 0,
-    errors: [] as string[]
+    errors: [] as string[],
+    providerStats: {} as Record<string, { fetched: number; error?: string }>
   };
 
   try {
@@ -93,8 +95,14 @@ export async function GET(req: NextRequest) {
           const jobs = await provider.fetchJobs(search);
           allJobs.push(...jobs);
           summary.jobsFetched += jobs.length;
+          const prev = summary.providerStats[provider.name];
+          summary.providerStats[provider.name] = { fetched: (prev?.fetched ?? 0) + jobs.length };
+          console.log(`[cron] ${provider.name}: ${jobs.length} jobs for ${client.clientName}`);
         } catch (err) {
-          summary.errors.push(`${provider.name}: ${String(err)}`);
+          const msg = String(err);
+          summary.errors.push(`${provider.name}(${client.clientName}): ${msg}`);
+          summary.providerStats[provider.name] = { fetched: summary.providerStats[provider.name]?.fetched ?? 0, error: msg };
+          console.error(`[cron] ${provider.name} error:`, msg);
         }
       }
 
@@ -297,13 +305,9 @@ function buildProviders() {
     // Employees will always land on the company's own career portal
     providers.push(new LinkedInJobProvider(apifyToken));
 
-    // Indeed and Glassdoor via generic Apify actors
-    providers.push(
-      new ApifyJobProvider({ name: "Indeed", actorId: "misceres/indeed-scraper", token: apifyToken })
-    );
-    providers.push(
-      new ApifyJobProvider({ name: "Glassdoor", actorId: "bebity/glassdoor-jobs-scraper", token: apifyToken })
-    );
+    // Indeed and Glassdoor via dedicated providers (correct input format for each actor)
+    providers.push(new IndeedJobProvider(apifyToken));
+    providers.push(new GlassdoorJobProvider(apifyToken));
   }
 
   return providers;
