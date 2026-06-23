@@ -35,7 +35,10 @@ export type FetchSummary = {
   errors: string[];
 };
 
-export async function fetchJobsForClient(client: ClientWithResumes): Promise<FetchSummary> {
+export async function fetchJobsForClient(
+  client: ClientWithResumes,
+  options: { postedWithinDays?: number } = {}
+): Promise<FetchSummary> {
   const summary: FetchSummary = { jobsFetched: 0, jobsSaved: 0, duplicatesSkipped: 0, errors: [] };
 
   const providers = buildProviders();
@@ -45,7 +48,7 @@ export async function fetchJobsForClient(client: ClientWithResumes): Promise<Fet
     locations: (client.preferredCities.length ? client.preferredCities : client.preferredLocations).slice(0, 3),
     countries: client.preferredCountries,
     remoteOnly: client.workModePreference === WorkMode.REMOTE,
-    postedWithinDays: 3,
+    postedWithinDays: options.postedWithinDays ?? 7,
     excludeKeywords: client.keywordsExclude
   };
 

@@ -29,6 +29,8 @@ export async function POST(
     select: { discoveredAt: true }
   });
 
+  const isFirstFetch = !lastJob;
+
   if (lastJob) {
     const elapsed = Date.now() - lastJob.discoveredAt.getTime();
     if (elapsed < COOLDOWN_MS) {
@@ -40,7 +42,11 @@ export async function POST(
     }
   }
 
-  const summary = await fetchJobsForClient(client);
+  // First fetch: look back 30 days so a new client gets a full backfill
+  // Subsequent refreshes: look back 7 days to pick up recent postings
+  const summary = await fetchJobsForClient(client, {
+    postedWithinDays: isFirstFetch ? 30 : 7
+  });
 
   await prisma.auditLog.create({
     data: {

@@ -115,8 +115,10 @@ export function locationMatchesClient(
   if (hasCountryPrefs) {
     const countryHit = client.preferredCountries.some((c) => matchesCountry(loc, c));
     if (countryHit) return true;
-    // Remote job but client has country preferences → reject (e.g. Germany remote for USA client)
-    if (isRemoteLabel) return false;
+    // Truly generic "Remote" / "Worldwide" / "Anywhere" with no specific country mentioned
+    // → accept for any client (they can work remotely from anywhere)
+    if (loc === "remote" || loc === "worldwide" || loc === "anywhere" || loc === "global") return true;
+    // Remote label with a specific country that didn't match → reject
     return false;
   }
 
@@ -149,15 +151,23 @@ export function isJobRelevant(
   });
   if (!titleMatch) return false;
 
-  // Remote-only clients: accept only remote/flexible/worldwide-labelled jobs
+  // Remote-only clients: job must be remote/flexible, then apply country filter
   if (client.workModePreference === WorkMode.REMOTE) {
     const locLower = job.location.toLowerCase();
-    return (
+    const isRemote =
       job.workMode === WorkMode.REMOTE ||
       job.workMode === WorkMode.FLEXIBLE ||
       locLower.includes("remote") ||
-      locLower.includes("worldwide")
-    );
+      locLower.includes("worldwide") ||
+      locLower.includes("anywhere");
+    if (!isRemote) return false;
+    // If client has country prefs, accept generic "Remote"/"Worldwide" but reject
+    // location-specific remote jobs from non-matching countries (e.g. "Remote, Brazil")
+    if (client.preferredCountries.length > 0) {
+      if (locLower === "remote" || locLower === "worldwide" || locLower === "anywhere" || locLower === "global") return true;
+      return client.preferredCountries.some((c) => matchesCountry(locLower, c));
+    }
+    return true;
   }
 
   return locationMatchesClient(job.location, client);

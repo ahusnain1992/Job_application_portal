@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         locations: (client.preferredCities.length ? client.preferredCities : client.preferredLocations).slice(0, 3),
         countries: client.preferredCountries,
         remoteOnly: client.workModePreference === WorkMode.REMOTE,
-        postedWithinDays: 3,
+        postedWithinDays: 7,
         excludeKeywords: client.keywordsExclude
       };
 

@@ -25,6 +25,12 @@ export function workModeLabel(mode: WorkMode) {
 
 export function employmentLabel(type: EmploymentType) {
   if (type === "FULL_TIME") return "Full-time";
+  if (type === "UNKNOWN") return "Any";
+  if (type === "PART_TIME") return "Part-time";
+  if (type === "CONTRACT") return "Contract";
+  if (type === "C2C") return "C2C";
+  if (type === "W2") return "W2";
+  if (type === "INTERNSHIP") return "Internship";
   return label(type);
 }
 
