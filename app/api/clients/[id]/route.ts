@@ -15,7 +15,7 @@ const UpdateSchema = z.object({
   alternativeJobTitles: z.string().max(1000).optional(),
   mainSkills: z.string().min(1).max(2000),
   secondarySkills: z.string().max(2000).optional(),
-  preferredLocations: z.string().min(1).max(1000),
+  preferredLocations: z.string().max(1000).optional().default(""),
   workModePreference: z.nativeEnum(WorkMode),
   employmentTypePreference: z.nativeEnum(EmploymentType),
   minimumSalary: z.coerce.number().int().min(0).max(10_000_000).optional().nullable(),
@@ -46,7 +46,7 @@ const UpdateSchema = z.object({
   highestDegree: z.string().max(100).optional().nullable(),
   fieldOfStudy: z.string().max(200).optional().nullable(),
   university: z.string().max(200).optional().nullable(),
-  graduationYear: z.coerce.number().int().min(1950).max(2100).optional().nullable(),
+  graduationYear: z.preprocess((v) => (v === "" || v === null || v === undefined ? null : Number(v)), z.number().int().min(1950).max(2100).nullable().optional()),
   gpa: z.string().max(20).optional().nullable(),
   // Work preferences
   noticePeriod: z.string().max(100).optional().nullable(),
