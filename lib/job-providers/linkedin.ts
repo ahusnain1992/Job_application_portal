@@ -34,7 +34,8 @@ export class LinkedInJobProvider implements JobProvider {
     for (const title of search.titles.slice(0, 2)) {
       try {
         const locationPart = search.locations?.[0] || search.countries?.[0] || "United States";
-        const searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}&location=${encodeURIComponent(locationPart)}&f_LF=f_AL&position=1&pageNum=0`;
+        // No f_LF=f_AL — that filter restricts to Easy Apply only (we want the opposite)
+        const searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}&location=${encodeURIComponent(locationPart)}&position=1&pageNum=0`;
         const input: Record<string, unknown> = {
           searchUrl,
           resultsLimit: 25,
@@ -86,8 +87,8 @@ export class LinkedInJobProvider implements JobProvider {
             companyCareerPageUrl: item.companyUrl
           });
         }
-      } catch {
-        // Skip on error — Apify timeouts or actor errors are non-fatal
+      } catch (err) {
+        console.error(`[linkedin] Error for "${title}":`, err);
       }
     }
 
