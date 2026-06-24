@@ -53,9 +53,10 @@ export async function POST(req: NextRequest) {
       const elapsed = Date.now() - t0;
       const withLink = jobs.filter((j) => j.applyUrl?.trim());
       const relevant = withLink.filter((j) => isJobRelevant(j, mockClient));
-      const allSamples = jobs.slice(0, 2).map((j) => ({
+      const allSamples = jobs.slice(0, 3).map((j) => ({
         title: j.title, company: j.companyName, location: j.location,
-        workMode: j.workMode, hasApplyUrl: !!j.applyUrl
+        workMode: j.workMode, hasApplyUrl: !!j.applyUrl,
+        passesFilter: isJobRelevant(j, mockClient)
       }));
       return {
         provider: provider.name,
