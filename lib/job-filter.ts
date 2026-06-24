@@ -79,8 +79,14 @@ const COUNTRY_KEYWORDS: Record<string, string[]> = {
   "new zealand": ["new zealand", "auckland", "wellington", "christchurch"],
 };
 
+// USA aliases — all resolve to the same full keyword list including state abbreviations
+const USA_ALIASES = new Set(["united states", "usa", "us", "u.s.", "america", "united states of america"]);
+
 function matchesCountry(loc: string, country: string): boolean {
-  const keywords = COUNTRY_KEYWORDS[country.toLowerCase()] ?? [country.toLowerCase()];
+  const key = country.toLowerCase().trim();
+  // Normalise all USA variants to "usa" so state abbreviations are always checked
+  const lookupKey = USA_ALIASES.has(key) ? "usa" : key;
+  const keywords = COUNTRY_KEYWORDS[lookupKey] ?? [key];
   return keywords.some((kw) => {
     const normalized = kw.trim().replace(/^,\s*/, "");
     // Two-letter state/country abbreviations need token boundaries.
