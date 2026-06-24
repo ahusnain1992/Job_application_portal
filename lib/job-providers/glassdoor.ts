@@ -2,18 +2,18 @@ import { EmploymentType, WorkMode } from "@prisma/client";
 import { JobProvider, JobProviderSearch, NormalizedJob } from "./types";
 
 type GlassdoorItem = {
-  jobId?: string;
-  jobTitle?: string;
-  title?: string;
+  job_id?: string;
+  job_title?: string;
+  job_url?: string;
+  job_location?: { unknown?: string; city?: string; country?: string };
+  job_description?: string;
+  job_remote?: boolean;
+  job_posted_date?: string;
+  job_salary?: string;
+  job_type?: string;
   employer?: { name?: string };
+  company?: string;
   companyName?: string;
-  location?: string;
-  jobType?: string;
-  description?: string;
-  applyUrl?: string;
-  jobListingUrl?: string;
-  url?: string;
-  postedDate?: string;
 };
 
 export class GlassdoorJobProvider implements JobProvider {
@@ -58,26 +58,35 @@ export class GlassdoorJobProvider implements JobProvider {
         console.log(`[glassdoor] Got ${items.length} results for "${title}"`);
 
         for (const item of items) {
-          const jobTitle = item.jobTitle || item.title || "";
-          const company = item.employer?.name || item.companyName || "";
-          if (!jobTitle || !company) continue;
+          const jobTitle = item.job_title || "";
+          const company = item.employer?.name || item.company || item.companyName || "Unknown Company";
+          if (!jobTitle) continue;
 
-          const applyUrl = item.applyUrl || item.jobListingUrl || item.url || "";
+          const applyUrl = item.job_url || "";
+          if (!applyUrl) continue;
+
+          const locationStr = item.job_location?.unknown ||
+            [item.job_location?.city, item.job_location?.country].filter(Boolean).join(", ") ||
+            location;
+
+          const workMode = item.job_remote
+            ? WorkMode.REMOTE
+            : inferWorkMode(locationStr);
 
           results.push({
-            externalId: `glassdoor-${item.jobId || encodeURIComponent(applyUrl || jobTitle + company)}`,
+            externalId: `glassdoor-${item.job_id || encodeURIComponent(jobTitle + company)}`,
             sourceName: this.name,
             sourceUrl: "https://www.glassdoor.com",
-            originalJobUrl: item.jobListingUrl || item.url,
+            originalJobUrl: item.job_url,
             companyName: company,
             title: jobTitle,
-            location: item.location || location,
-            workMode: inferWorkMode(item.location || ""),
-            employmentType: inferEmployment(item.jobType || ""),
-            description: item.description || "",
+            location: locationStr,
+            workMode,
+            employmentType: inferEmployment(item.job_type || ""),
+            description: item.job_description || "",
             requiredSkills: [],
             preferredSkills: [],
-            postedDate: item.postedDate ? new Date(item.postedDate) : undefined,
+            postedDate: item.job_posted_date ? new Date(item.job_posted_date) : undefined,
             applyUrl
           });
         }

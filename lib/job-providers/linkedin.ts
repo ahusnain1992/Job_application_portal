@@ -34,13 +34,10 @@ export class LinkedInJobProvider implements JobProvider {
     for (const title of search.titles.slice(0, 2)) {
       try {
         const locationPart = search.locations?.[0] || search.countries?.[0] || "United States";
-        // Build LinkedIn search URL with remote filter (f_WT=2) when client wants remote
-        // geoId=103644278 = United States on LinkedIn
-        const baseUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}&location=${encodeURIComponent(locationPart)}&position=1&pageNum=0`;
-        const searchUrl = search.remoteOnly ? `${baseUrl}&f_WT=2` : baseUrl;
         const input: Record<string, unknown> = {
-          searchUrl,
-          resultsLimit: 25,
+          title,
+          location: locationPart,
+          rows: 25,
           proxy: { useApifyProxy: true }
         };
 

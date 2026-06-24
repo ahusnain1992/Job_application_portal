@@ -13,7 +13,8 @@ type IndeedItem = {
   salary?: string;
   jobType?: string;
   description?: string;
-  postedAt?: string;
+  postedAt?: string;           // "14 days ago" — not a real date
+  postingDateParsed?: string;  // ISO date string — use this instead
   externalApplyLink?: string;
 };
 
@@ -82,7 +83,7 @@ export class IndeedJobProvider implements JobProvider {
             description: item.description || "",
             requiredSkills: [],
             preferredSkills: [],
-            postedDate: item.postedAt ? new Date(item.postedAt) : undefined,
+            postedDate: item.postingDateParsed ? new Date(item.postingDateParsed) : undefined,
             applyUrl
           });
         }
