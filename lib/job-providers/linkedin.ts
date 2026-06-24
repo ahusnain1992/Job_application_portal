@@ -33,9 +33,7 @@ export class LinkedInJobProvider implements JobProvider {
 
     for (const title of search.titles.slice(0, 2)) {
       try {
-        const locationPart = search.remoteOnly
-          ? "Remote"
-          : (search.locations?.[0] || search.countries?.[0] || "United States");
+        const locationPart = search.locations?.[0] || search.countries?.[0] || "United States";
         // Use structured input (current actor API format)
         const input: Record<string, unknown> = {
           title,
