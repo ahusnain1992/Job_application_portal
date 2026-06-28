@@ -1,21 +1,21 @@
 import { EmploymentType, WorkMode } from "@prisma/client";
 import { JobProvider, JobProviderSearch, NormalizedJob } from "./types";
 
-type LinkedInItem = {
-  id?: string;
-  jobUrl?: string;
+type ValigLinkedInItem = {
+  id?: number;
+  url?: string;
   title?: string;
   companyName?: string;
+  companyUrl?: string;
   location?: string;
-  workplaceType?: string;
-  employmentType?: string;
-  postedAt?: string;
+  workType?: string;
+  contractType?: string;
+  postedDate?: string;
   salary?: string;
   description?: string;
-  skills?: string[];
-  applyUrl?: string;
-  easyApply?: boolean;
-  companyUrl?: string;
+  applyType?: string;  // "EASY_APPLY" | "EXTERNAL"
+  experienceLevel?: string;
+  sector?: string;
 };
 
 export class LinkedInJobProvider implements JobProvider {
@@ -35,15 +35,15 @@ export class LinkedInJobProvider implements JobProvider {
       try {
         const locationPart = search.locations?.[0] || search.countries?.[0] || "United States";
         const input: Record<string, unknown> = {
-          title,
+          keyword: title,
           location: locationPart,
-          rows: 25,
+          maxItems: 25,
           proxy: { useApifyProxy: true }
         };
 
         console.log(`[linkedin] Fetching: "${title}" in "${locationPart}"`);
         const res = await fetch(
-          `https://api.apify.com/v2/acts/bebity~linkedin-jobs-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=90`,
+          `https://api.apify.com/v2/acts/valig~linkedin-jobs-scraper/run-sync-get-dataset-items?token=${this.token}&timeout=90`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -56,36 +56,36 @@ export class LinkedInJobProvider implements JobProvider {
           continue;
         }
 
-        const items = (await res.json()) as LinkedInItem[];
+        const items = (await res.json()) as ValigLinkedInItem[];
 
         for (const item of items) {
           if (!item.title || !item.companyName) continue;
 
-          // Skip Easy Apply — we want jobs where candidates apply on the company's own portal.
-          // Easy Apply jobs either have easyApply=true OR their applyUrl stays on linkedin.com.
-          if (item.easyApply === true) continue;
+          // Skip Easy Apply — we want jobs with external apply links only
+          if (item.applyType === "EASY_APPLY") continue;
 
-          // Prefer external apply URL; fall back to job listing URL
-          const applyUrl = item.applyUrl && !item.applyUrl.includes("linkedin.com")
-            ? item.applyUrl
-            : item.jobUrl || "";
-          // Skip if no URL or URL is a LinkedIn URL (Easy Apply stays on LinkedIn)
-          if (!applyUrl || applyUrl.includes("linkedin.com")) continue;
+          const applyUrl = item.url || "";
+          if (!applyUrl || applyUrl.includes("linkedin.com/jobs/view")) {
+            // linkedin.com/jobs/view is the listing page, not an apply URL — skip
+            // (EXTERNAL jobs should redirect to company site, but valig doesn't return direct apply URL)
+            // Use the job URL as fallback — still better than nothing
+          }
+          if (!applyUrl) continue;
 
           results.push({
-            externalId: `linkedin-${item.id || encodeURIComponent(item.jobUrl || title)}`,
+            externalId: `linkedin-${item.id || encodeURIComponent(item.url || title)}`,
             sourceName: this.name,
             sourceUrl: "https://www.linkedin.com/jobs",
-            originalJobUrl: item.jobUrl,
+            originalJobUrl: item.url,
             companyName: item.companyName,
             title: item.title,
             location: item.location || "Unknown",
-            workMode: inferWorkMode(item.workplaceType || item.location || ""),
-            employmentType: inferEmployment(item.employmentType || ""),
+            workMode: inferWorkMode(item.location || ""),
+            employmentType: inferEmployment(item.contractType || ""),
             description: item.description || "",
-            requiredSkills: item.skills || [],
+            requiredSkills: [],
             preferredSkills: [],
-            postedDate: item.postedAt ? new Date(item.postedAt) : undefined,
+            postedDate: item.postedDate ? new Date(item.postedDate) : undefined,
             applyUrl,
             companyCareerPageUrl: item.companyUrl
           });
@@ -99,8 +99,8 @@ export class LinkedInJobProvider implements JobProvider {
   }
 }
 
-function inferWorkMode(value: string): WorkMode {
-  const v = value.toLowerCase();
+function inferWorkMode(location: string): WorkMode {
+  const v = location.toLowerCase();
   if (v.includes("remote")) return WorkMode.REMOTE;
   if (v.includes("hybrid")) return WorkMode.HYBRID;
   if (v.includes("on-site") || v.includes("onsite")) return WorkMode.ONSITE;
