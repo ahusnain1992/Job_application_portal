@@ -8,9 +8,33 @@ export async function GET() {
   if (!token) return NextResponse.json({ error: "No APIFY_API_TOKEN" });
 
   const actors = [
-    { name: "LinkedIn", id: "bebity~linkedin-jobs-scraper", input: { searchUrl: "https://www.linkedin.com/jobs/search/?keywords=data+engineer&location=United+States", resultsLimit: 3, proxy: { useApifyProxy: true } } },
-    { name: "Indeed", id: "misceres~indeed-scraper", input: { position: "Data Engineer", country: "US", location: "United States", maxItems: 3 } },
-    { name: "Glassdoor", id: "bebity~glassdoor-jobs-scraper", input: { keyword: "Data Engineer", locationName: "United States", maxItems: 3 } },
+    // Free actors (no monthly rental fee — pay compute only)
+    {
+      name: "LinkedIn-Free (curious_coder)",
+      id: "curious_coder~linkedin-jobs-scraper",
+      input: { searchUrl: "https://www.linkedin.com/jobs/search/?keywords=data+engineer&location=United+States&f_WT=2", count: 3, proxy: { useApifyProxy: true } }
+    },
+    {
+      name: "Indeed-Free (borderline)",
+      id: "borderline~indeed-scraper",
+      input: { queries: [{ keyword: "Data Engineer", location: "United States" }], maxItems: 3 }
+    },
+    // Paid actors (require rental)
+    {
+      name: "LinkedIn-Paid (bebity)",
+      id: "bebity~linkedin-jobs-scraper",
+      input: { title: "Data Engineer", location: "United States", rows: 3, proxy: { useApifyProxy: true } }
+    },
+    {
+      name: "Glassdoor-Paid (bebity)",
+      id: "bebity~glassdoor-jobs-scraper",
+      input: { keyword: "Data Engineer", locationName: "United States", maxItems: 3 }
+    },
+    {
+      name: "Indeed-Paid (misceres)",
+      id: "misceres~indeed-scraper",
+      input: { position: "Data Engineer", country: "US", location: "United States", maxItems: 3 }
+    },
   ];
 
   const results = await Promise.all(actors.map(async (actor) => {
@@ -22,7 +46,13 @@ export async function GET() {
       const text = await res.text();
       let parsed;
       try { parsed = JSON.parse(text); } catch { parsed = text.slice(0, 500); }
-      return { actor: actor.name, status: res.status, itemCount: Array.isArray(parsed) ? parsed.length : null, response: Array.isArray(parsed) ? parsed.slice(0, 1) : parsed };
+      const items = Array.isArray(parsed) ? parsed : null;
+      return {
+        actor: actor.name,
+        status: res.status,
+        itemCount: items ? items.length : null,
+        response: items ? items.slice(0, 1) : parsed
+      };
     } catch (e) {
       return { actor: actor.name, error: String(e) };
     }
