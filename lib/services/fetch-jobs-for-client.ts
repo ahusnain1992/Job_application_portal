@@ -49,7 +49,7 @@ export async function fetchJobsForClient(
     duplicatesSkipped: 0,
     noApplyLink: 0,
     filteredOut: 0,
-    search: { titles: [], locations: [], countries: [], remoteOnly: false, postedWithinDays: options.postedWithinDays ?? 7 },
+    search: { titles: [], locations: [], countries: [], remoteOnly: false, postedWithinDays: options.postedWithinDays ?? 30 },
     errors: [],
     providerStats: {}
   };
@@ -66,7 +66,7 @@ export async function fetchJobsForClient(
     locations: (client.preferredCities.length ? client.preferredCities : client.preferredLocations).slice(0, 3),
     countries: client.preferredCountries,
     remoteOnly: client.workModePreference === WorkMode.REMOTE,
-    postedWithinDays: options.postedWithinDays ?? 7,
+    postedWithinDays: options.postedWithinDays ?? 30,
     includeKeywords: [...client.mainSkills, ...client.secondarySkills].slice(0, 12),
     excludeKeywords: client.keywordsExclude
   };
