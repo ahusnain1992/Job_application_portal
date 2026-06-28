@@ -6,11 +6,12 @@ import { prisma } from "@/lib/prisma";
 import { getProviderManifest } from "@/lib/job-providers/registry";
 
 export default async function SettingsPage({ searchParams }: { searchParams: { error?: string } }) {
-  await requireRole(Role.ADMIN);
+  const currentUser = await requireRole(Role.ADMIN);
   const providerManifest = getProviderManifest();
-  const [sources, teamMembers, dailyTargets] = await Promise.all([
+  const [sources, teamMembers, admins, dailyTargets] = await Promise.all([
     prisma.jobSource.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.user.findMany({ where: { role: Role.TEAM_MEMBER }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { role: Role.ADMIN }, orderBy: { name: "asc" } }),
     prisma.dailyTarget.findMany({ select: { userId: true, target: true } })
   ]);
   const targetByUser = Object.fromEntries(dailyTargets.map((t) => [t.userId, t.target]));
@@ -19,6 +20,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
     "missing-fields": "Name, email, and password are all required.",
     "email-taken": "A user with that email already exists.",
     "self-deactivate": "You cannot deactivate your own account.",
+    "self-delete": "You cannot delete your own account.",
     "invalid-user": "That user action could not be completed."
   };
 
@@ -74,6 +76,49 @@ export default async function SettingsPage({ searchParams }: { searchParams: { e
                       {member.active ? "Deactivate" : "Reactivate"}
                     </button>
                   </form>
+                  <form action="/api/users" method="post" >
+                    <input type="hidden" name="userId" value={member.id} />
+                    <input type="hidden" name="action" value="delete" />
+                    <button className="text-xs text-red-500 underline hover:text-red-700">Delete</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      <h2 className="mb-4 text-lg font-semibold text-ink">Admin accounts</h2>
+      <div className="mb-8 grid gap-6 xl:grid-cols-[380px_1fr]">
+        <Panel title="Add admin">
+          <form action="/api/users" method="post" className="space-y-3">
+            <TextInput name="name" placeholder="Full name" required />
+            <TextInput name="email" type="email" placeholder="Email address" required />
+            <TextInput name="password" type="password" placeholder="Temporary password" required />
+            <input type="hidden" name="action" value="create-admin" />
+            <SubmitButton>Create admin account</SubmitButton>
+          </form>
+        </Panel>
+        <Panel title="Admin accounts">
+          <div className="space-y-3">
+            {admins.length === 0 ? (
+              <div className="text-sm text-muted">No admins yet.</div>
+            ) : admins.map((admin) => (
+              <div key={admin.id} className="flex items-center justify-between gap-3 border-b border-line pb-3 last:border-0">
+                <div>
+                  <div className="font-medium text-ink">{admin.name}</div>
+                  <div className="text-sm text-muted">{admin.email}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {admin.id === currentUser.id ? (
+                    <span className="text-xs text-muted italic">You</span>
+                  ) : (
+                    <form action="/api/users" method="post">
+                      <input type="hidden" name="userId" value={admin.id} />
+                      <input type="hidden" name="action" value="delete" />
+                      <button className="text-xs text-red-500 underline hover:text-red-700">Delete</button>
+                    </form>
+                  )}
                 </div>
               </div>
             ))}

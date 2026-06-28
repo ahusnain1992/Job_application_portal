@@ -45,6 +45,41 @@ export async function POST(request: NextRequest) {
     return redirectTo("/settings");
   }
 
+  if (action === "delete") {
+    const parsed = UserActionSchema.safeParse({ userId: form.get("userId") });
+    if (!parsed.success) {
+      return redirectTo("/settings?error=invalid-user");
+    }
+    const { userId } = parsed.data;
+    if (userId === user.id) {
+      return redirectTo("/settings?error=self-delete");
+    }
+    await prisma.user.delete({ where: { id: userId } });
+    await prisma.auditLog.create({ data: { actorId: user.id, action: "USER_DELETED", entity: "User", entityId: userId } });
+    return redirectTo("/settings");
+  }
+
+  if (action === "create-admin") {
+    const parsed = CreateUserSchema.safeParse({
+      name: String(form.get("name") || "").trim(),
+      email: String(form.get("email") || "").toLowerCase().trim(),
+      password: String(form.get("password") || "").trim()
+    });
+    if (!parsed.success) {
+      return redirectTo("/settings?error=missing-fields");
+    }
+    const { name, email, password } = parsed.data;
+    const existing = await prisma.user.findFirst({ where: { email } });
+    if (existing) {
+      return redirectTo("/settings?error=email-taken");
+    }
+    const newAdmin = await prisma.user.create({
+      data: { name, email, passwordHash: await hashPassword(password), role: Role.ADMIN }
+    });
+    await prisma.auditLog.create({ data: { actorId: user.id, action: "ADMIN_CREATED", entity: "User", entityId: newAdmin.id } });
+    return redirectTo("/settings");
+  }
+
   const parsed = CreateUserSchema.safeParse({
     name: String(form.get("name") || "").trim(),
     email: String(form.get("email") || "").toLowerCase().trim(),
