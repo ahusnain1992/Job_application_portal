@@ -36,8 +36,10 @@ export class LinkedInJobProvider implements JobProvider {
         const locationPart = search.locations?.[0] || search.countries?.[0] || "United States";
         const input: Record<string, unknown> = {
           keyword: title,
+          keywords: title,
+          searchQuery: title,
           location: locationPart,
-          maxItems: 25,
+          maxItems: 50,
           proxy: { useApifyProxy: true }
         };
 
@@ -63,6 +65,13 @@ export class LinkedInJobProvider implements JobProvider {
 
           // Skip Easy Apply — we want jobs with external apply links only
           if (item.applyType === "EASY_APPLY") continue;
+
+          // valig actor ignores keyword param — filter by title domain words
+          const titleLow = item.title.toLowerCase();
+          const domainMatch = search.titles.some((t) =>
+            t.toLowerCase().split(/\s+/).filter((w) => w.length > 3).some((w) => titleLow.includes(w))
+          );
+          if (!domainMatch) continue;
 
           const applyUrl = item.url || "";
           if (!applyUrl || applyUrl.includes("linkedin.com/jobs/view")) {
