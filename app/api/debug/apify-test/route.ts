@@ -10,17 +10,7 @@ export async function GET() {
   const actors = [
     // Free actors (no monthly rental fee — pay compute only)
     {
-      name: "LinkedIn-Free-A (curious_coder keyword)",
-      id: "curious_coder~linkedin-jobs-scraper",
-      input: { keyword: "data engineer", location: "United States", limit: 3, proxy: { useApifyProxy: true } }
-    },
-    {
-      name: "LinkedIn-Free-B (curious_coder url str)",
-      id: "curious_coder~linkedin-jobs-scraper",
-      input: { searchUrl: "https://www.linkedin.com/jobs/search/?keywords=data+engineer&location=United+States", limit: 3, proxy: { useApifyProxy: true } }
-    },
-    {
-      name: "LinkedIn-Free-C (valig)",
+      name: "LinkedIn-Free (valig) — sample fields",
       id: "valig~linkedin-jobs-scraper",
       input: { keyword: "data engineer", location: "United States", maxItems: 3, proxy: { useApifyProxy: true } }
     },
