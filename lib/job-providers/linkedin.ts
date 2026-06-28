@@ -65,8 +65,11 @@ export class LinkedInJobProvider implements JobProvider {
           // Easy Apply jobs either have easyApply=true OR their applyUrl stays on linkedin.com.
           if (item.easyApply === true) continue;
 
-          const applyUrl = item.applyUrl || "";
-          // If no external apply URL, or if the URL is a LinkedIn URL, it's Easy Apply
+          // Prefer external apply URL; fall back to job listing URL
+          const applyUrl = item.applyUrl && !item.applyUrl.includes("linkedin.com")
+            ? item.applyUrl
+            : item.jobUrl || "";
+          // Skip if no URL or URL is a LinkedIn URL (Easy Apply stays on LinkedIn)
           if (!applyUrl || applyUrl.includes("linkedin.com")) continue;
 
           results.push({
