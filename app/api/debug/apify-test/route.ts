@@ -12,12 +12,17 @@ export async function GET() {
     {
       name: "LinkedIn-Free (curious_coder)",
       id: "curious_coder~linkedin-jobs-scraper",
-      input: { searchUrl: "https://www.linkedin.com/jobs/search/?keywords=data+engineer&location=United+States&f_WT=2", count: 3, proxy: { useApifyProxy: true } }
+      input: { startUrls: [{ url: "https://www.linkedin.com/jobs/search/?keywords=data+engineer&location=United+States&f_WT=2" }], maxItems: 3, proxy: { useApifyProxy: true } }
     },
     {
-      name: "Indeed-Free (borderline)",
+      name: "Indeed-Free (borderline) v1",
       id: "borderline~indeed-scraper",
-      input: { queries: [{ keyword: "Data Engineer", location: "United States" }], maxItems: 3 }
+      input: { keyword: "Data Engineer", location: "United States", maxItems: 3 }
+    },
+    {
+      name: "Indeed-Free (borderline) v2",
+      id: "borderline~indeed-scraper",
+      input: { searchQueries: [{ keyword: "Data Engineer", location: "United States" }], maxItems: 3 }
     },
     // Paid actors (require rental)
     {
