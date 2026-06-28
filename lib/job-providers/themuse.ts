@@ -20,10 +20,6 @@ export class TheMuseJobProvider implements JobProvider {
 
   async fetchJobs(search: JobProviderSearch): Promise<NormalizedJob[]> {
     const results: NormalizedJob[] = [];
-    const queryParts = [...search.titles, ...(search.includeKeywords ?? [])]
-      .flatMap((value) => value.toLowerCase().split(/\s+/))
-      .filter((word) => word.length > 1);
-
     for (const page of [0, 1]) {
       try {
         const params = new URLSearchParams({
@@ -41,8 +37,12 @@ export class TheMuseJobProvider implements JobProvider {
 
         for (const job of jobs.slice(0, 15)) {
           if (!job.name || !job.company?.name) continue;
-          const haystack = `${job.name} ${job.contents || ""} ${job.tags?.map((t) => t.name).join(" ") || ""}`.toLowerCase();
-          if (queryParts.length && !queryParts.some((word) => haystack.includes(word))) continue;
+          // Only check the job TITLE against domain words (not description — too noisy)
+          const titleLow = job.name.toLowerCase();
+          const domainMatch = search.titles.some((t) =>
+            t.toLowerCase().split(/\s+/).filter((w) => w.length > 3).some((w) => titleLow.includes(w))
+          );
+          if (!domainMatch) continue;
 
           const location = job.locations?.map((l) => l.name).join(", ") || "Unknown";
           const isRemote = location.toLowerCase().includes("remote") || location.toLowerCase().includes("flexible");

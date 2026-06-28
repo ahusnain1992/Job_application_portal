@@ -42,6 +42,13 @@ export class HimalayasJobProvider implements JobProvider {
           const applyUrl = job.applicationLink;
           if (!applyUrl) continue;
 
+          // Himalayas q param searches tags/description, not title — filter by title here
+          const titleLow = job.title.toLowerCase();
+          const domainMatch = search.titles.some((t) =>
+            t.toLowerCase().split(/\s+/).filter((w) => w.length > 3).some((w) => titleLow.includes(w))
+          );
+          if (!domainMatch) continue;
+
           const location = job.locationRestrictions?.join(", ") || "Remote";
           results.push({
             externalId: `himalayas-${job.guid ?? job.companySlug}`,

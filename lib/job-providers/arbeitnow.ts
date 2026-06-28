@@ -39,6 +39,13 @@ export class ArbeitnowJobProvider implements JobProvider {
         for (const job of jobs.slice(0, 15)) {
           if (!job.title || !job.company_name) continue;
 
+          // Arbeitnow ignores the q param and returns German general feed — filter by title
+          const titleLow = job.title.toLowerCase();
+          const domainMatch = search.titles.some((t) =>
+            t.toLowerCase().split(/\s+/).filter((w) => w.length > 3).some((w) => titleLow.includes(w))
+          );
+          if (!domainMatch) continue;
+
           const isRemote = job.remote || (job.location || "").toLowerCase().includes("remote");
           results.push({
             externalId: `arbeitnow-${job.slug}`,
