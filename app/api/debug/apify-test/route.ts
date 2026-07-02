@@ -14,6 +14,16 @@ export async function GET() {
       id: "valig~linkedin-jobs-scraper",
       input: { keyword: "data engineer", location: "United States", maxItems: 3, proxy: { useApifyProxy: true } }
     },
+    {
+      name: "LinkedIn-FantasticJobs (real filter test)",
+      id: "fantastic-jobs~advanced-linkedin-job-search-api",
+      input: {
+        titleSearch: ["Data Engineer"],
+        locationSearch: ["United States"],
+        limit: 5,
+        timeRange: "7d"
+      }
+    },
     // Paid actors (require rental)
     {
       name: "LinkedIn-Paid (bebity)",
