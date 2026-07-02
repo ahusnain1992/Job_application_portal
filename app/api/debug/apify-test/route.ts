@@ -18,10 +18,10 @@ export async function GET() {
       name: "LinkedIn-FantasticJobs (real filter test)",
       id: "fantastic-jobs~advanced-linkedin-job-search-api",
       input: {
-        titleSearch: ["Data Engineer"],
+        titleSearch: ["Senior Data Engineer"],
         locationSearch: ["United States"],
         limit: 10,
-        timeRange: "7d"
+        timeRange: "6m"
       }
     },
     // Paid actors (require rental)
