@@ -20,7 +20,7 @@ export async function GET() {
       input: {
         titleSearch: ["Data Engineer"],
         locationSearch: ["United States"],
-        limit: 5,
+        limit: 10,
         timeRange: "7d"
       }
     },
